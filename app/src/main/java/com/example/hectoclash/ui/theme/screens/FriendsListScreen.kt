@@ -12,7 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.hectoclash.model.DummyData
+import com.example.hectoclash.data.models.DummyData
 import com.example.hectoclash.navigation.Screen
 import com.example.hectoclash.ui.theme.components.UserListItem
 

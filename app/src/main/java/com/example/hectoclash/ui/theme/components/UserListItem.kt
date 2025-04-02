@@ -20,13 +20,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.example.hectoclash.model.User
+import com.example.hectoclash.data.models.User1
 import com.example.hectoclash.ui.theme.OfflineIndicator
 import com.example.hectoclash.ui.theme.OnlineIndicator
 
 @Composable
 fun UserListItem(
-    user: User,
+    user: User1,
     onClick: () -> Unit
 ) {
     Card(
