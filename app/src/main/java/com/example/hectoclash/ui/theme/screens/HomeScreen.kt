@@ -44,7 +44,11 @@ fun HomeScreen(mainNavController: NavController) {
                     RewardsScreen()
                 }
                 composable(BottomNavItem.Profile.route) {
-                    ProfileScreen()
+                    ProfileScreen(onLogout = {
+                        mainNavController.navigate("sign_in") {
+                            popUpTo("home") { inclusive = true } // Clears home and everything from the backstack
+                        }
+                    })
                 }
             }
         }
