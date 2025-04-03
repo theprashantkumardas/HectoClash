@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.hectoclash.data.local.TokenManager
 import com.example.hectoclash.data.repository.AuthRepository
+import com.example.hectoclash.utils.SocketManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,6 +39,9 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                             playerId = response.playerId,
                             token = response.token
                         )
+                        // Connect WebSocket when logged in
+                        SocketManager.connect(response._id)
+
                         _authState.value = AuthState.Success("Sign in successful")
                     },
                     onFailure = { exception ->
@@ -78,6 +82,10 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                             playerId = response.playerId,
                             token = response.token
                         )
+
+                        // Connect WebSocket when logged in
+                        SocketManager.connect(response._id)
+
                         _authState.value = AuthState.Success("Account created successfully")
                     },
                     onFailure = { exception ->

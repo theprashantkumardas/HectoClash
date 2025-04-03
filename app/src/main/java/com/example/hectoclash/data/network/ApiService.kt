@@ -1,6 +1,7 @@
 package com.example.hectoclash.data.network
 
 import com.example.hectoclash.data.models.AuthResponse
+import com.example.hectoclash.data.models.OnlineUserResponse
 import com.example.hectoclash.data.models.SignInRequest
 import com.example.hectoclash.data.models.SignUpRequest
 import retrofit2.Response
@@ -20,4 +21,8 @@ interface ApiService {
     // Add your protected endpoints here
     @GET("api/user/profile")
     suspend fun getUserProfile(): Response<Any> // Replace 'Any' with your actual response type
+
+    // New endpoint to get online users
+    @GET("api/users/online-users")
+    suspend fun getOnlineUsers(): Response<List<OnlineUserResponse>>
 }

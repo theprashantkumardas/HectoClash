@@ -6,6 +6,7 @@ import com.example.hectoclash.data.models.AuthResponse
 import com.example.hectoclash.data.models.SignInRequest
 import com.example.hectoclash.data.models.SignUpRequest
 import com.example.hectoclash.data.network.RetrofitClient
+import com.example.hectoclash.utils.SocketManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
@@ -67,7 +68,12 @@ class AuthRepository(private val context: Context) {
 
                 if (response.isSuccessful) {
                     response.body()?.let {
+                        // Connect to socket
+                        SocketManager.connect(it._id)
+
                         Result.success(it)
+
+
                     } ?: Result.failure(Exception("Empty response body"))
                 } else {
                     val errorBody = response.errorBody()?.string()

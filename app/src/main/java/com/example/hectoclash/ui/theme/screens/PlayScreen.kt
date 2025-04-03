@@ -36,7 +36,7 @@ fun PlayScreen(navController: NavController) {
         ButtonOption(
             text = "Play Online",
             icon = Icons.Filled.Public,
-            onClick = { /* Handle play online */ },
+            onClick = { navController.navigate(Screen.OnlineUsers.route) },
             modifier = Modifier.padding(bottom = 16.dp)
         )
 

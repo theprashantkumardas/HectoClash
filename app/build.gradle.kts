@@ -53,6 +53,7 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.espresso.core)
+    implementation(libs.androidx.runtime.livedata)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -92,5 +93,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended:1.7.8")
 
     implementation ("androidx.datastore:datastore-preferences:1.0.0")
+
+    implementation("com.google.code.gson:gson:2.10.1")
 
 }

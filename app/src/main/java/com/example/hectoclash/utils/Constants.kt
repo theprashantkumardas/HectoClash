@@ -2,7 +2,8 @@ package com.example.hectoclash.utils
 
 object Constants {
     // Replace with your actual backend URL
-    const val BASE_URL = "https://hectoclashapi.onrender.com/"
+//    const val BASE_URL = "https://hectoclashapi.onrender.com/"
+    const val BASE_URL = "http://192.168.1.108:8000/"
 
     // DataStore preferences name
     const val PREFS_NAME = "hectoclash_prefs"

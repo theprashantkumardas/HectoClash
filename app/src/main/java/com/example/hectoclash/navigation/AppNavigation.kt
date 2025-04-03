@@ -16,6 +16,7 @@ import com.example.hectoclash.data.local.TokenManager
 import com.example.hectoclash.ui.theme.screens.FriendsListScreen
 import com.example.hectoclash.ui.theme.screens.GameScreen
 import com.example.hectoclash.ui.theme.screens.HomeScreen
+import com.example.hectoclash.ui.theme.screens.PlayOnlineScreen
 import com.example.hectoclash.ui.theme.screens.ProfileScreen
 import com.example.hectoclash.ui.theme.screens.SignInScreen
 import com.example.hectoclash.ui.theme.screens.SignUpScreen
@@ -30,6 +31,7 @@ sealed class Screen(val route: String) {
     object Rewards : Screen("rewards")
     object Profile : Screen("profile")
     object FriendsList : Screen("friends_list")
+    object OnlineUsers : Screen("online_users")
     object Game : Screen("game/{userId}/{username}/{points}") {
         fun createRoute(userId: String, username: String, points: Int): String {
             return "game/$userId/$username/$points"
@@ -37,47 +39,7 @@ sealed class Screen(val route: String) {
     }
 }
 
-//@Composable
-//fun AppNavigation() {
-//    val navController = rememberNavController()
-//    NavHost(navController = navController, startDestination = Screen.SignIn.route) {
-//        composable(Screen.SignIn.route) {
-//            SignInScreen(navController)
-//        }
-//
-//        composable(Screen.SignUp.route) {
-//            SignUpScreen(navController)
-//        }
-//        composable(Screen.Home.route) {
-//            HomeScreen(navController)
-//        }
-//
-//        composable(Screen.Profile.route) {
-//            ProfileScreen(onLogout = {
-//                navController.navigate(Screen.SignIn.route) {
-//                    popUpTo(Screen.Home.route) { inclusive = true }
-//                }
-//            })
-//        }
-//
-//        composable(Screen.FriendsList.route) {
-//            FriendsListScreen(navController)
-//        }
-//        composable(
-//            Screen.Game.route,
-//            arguments = listOf(
-//                navArgument("userId") { type = NavType.StringType },
-//                navArgument("username") { type = NavType.StringType },
-//                navArgument("points") { type = NavType.IntType }
-//            )
-//        ) { backStackEntry ->
-//            val userId = backStackEntry.arguments?.getString("userId") ?: ""
-//            val username = backStackEntry.arguments?.getString("username") ?: ""
-//            val points = backStackEntry.arguments?.getInt("points") ?: 0
-//            GameScreen(userId, username, points)
-//        }
-//    }
-//}
+
 
 @Composable
 fun AppNavigation() {
@@ -118,6 +80,19 @@ fun AppNavigation() {
 
         composable(Screen.FriendsList.route) {
             FriendsListScreen(navController)
+        }
+
+        composable(Screen.OnlineUsers.route) {
+            PlayOnlineScreen(
+                onBackClick = { navController.popBackStack() },
+                onChallengeUser = { user ->
+                    val route = Screen.Game.createRoute(
+                        user._id, user.name,
+                        points = TODO(),
+                    )
+                    navController.navigate(route)
+                }
+            )
         }
 
         composable(

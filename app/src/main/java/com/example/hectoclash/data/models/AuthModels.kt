@@ -32,3 +32,10 @@ data class User(
     val playerId: String,
     val email: String
 )
+
+// Online User response model
+data class OnlineUserResponse(
+    val _id: String,
+    val name: String,
+    val playerId: String
+)
