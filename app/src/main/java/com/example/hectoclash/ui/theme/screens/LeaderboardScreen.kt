@@ -1,10 +1,5 @@
 package com.example.hectoclash.ui.theme.screens
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -12,9 +7,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,257 +16,190 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.hectoclash.R
-
-enum class LeaderboardType {
-    GLOBAL, COUNTRY, COLLEGE
-}
-
-data class LeaderboardEntry(
-    val rank: Int,
-    val playerId: String,
-    val profilePicRes: Int,
-    val matches: Int,
-    val won: Int,
-    val loss: Int,
-    val points: Int
-)
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.hectoclash.data.local.TokenManager
+import com.example.hectoclash.data.models.LeaderboardEntry
+import com.example.hectoclash.viewmodels.LeaderboardViewModel
+import com.example.hectoclash.viewmodels.ViewModelFactory
+import kotlinx.coroutines.flow.firstOrNull
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LeaderboardScreen() {
-    // State for dropdown
-    var expanded by remember { mutableStateOf(false) }
-    var selectedLeaderboardType by remember { mutableStateOf(LeaderboardType.GLOBAL) }
-
-    // Current user and time
-    val currentUser = "MonuGit9"
-
-    // Dummy data for user's stats
-    val globalRank = 1
-    val countryRank = 1
-    val collegeRank = 1
-
-    // Dummy data for leaderboard
-    val dummyEntries = listOf(
-        LeaderboardEntry(1, "Pro_Player1", R.drawable.default_profile, 120, 85, 35, 2500),
-        LeaderboardEntry(2, "GameMaster", R.drawable.default_profile, 110, 75, 35, 2350),
-        LeaderboardEntry(3, "ChampionGirl", R.drawable.default_profile, 95, 68, 27, 2100),
-        LeaderboardEntry(4, "WinnerX", R.drawable.default_profile, 105, 65, 40, 1950),
-        LeaderboardEntry(5, "TopPlayer", R.drawable.default_profile, 90, 60, 30, 1800),
-        LeaderboardEntry(6, "GamerKid", R.drawable.default_profile, 80, 52, 28, 1650),
-        LeaderboardEntry(7, "MonuGit9", R.drawable.default_profile, 75, 48, 27, 1500),
-        LeaderboardEntry(8, "LeaderPro", R.drawable.default_profile, 70, 42, 28, 1350),
-        LeaderboardEntry(9, "StarGamer", R.drawable.default_profile, 65, 38, 27, 1200),
-        LeaderboardEntry(10, "ProGamer123", R.drawable.default_profile, 60, 35, 25, 1050),
+fun LeaderboardScreen(
+    viewModel: LeaderboardViewModel = viewModel(
+        factory = ViewModelFactory(LocalContext.current.applicationContext as android.app.Application)
     )
+) {
+    val context = LocalContext.current
+
+    // Collect state from ViewModel
+    val leaderboardEntries by viewModel.leaderboardEntries.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
+
+    // Get current user's player ID
+    val currentPlayerId = remember { mutableStateOf("") }
+    LaunchedEffect(Unit) {
+        TokenManager.getInstance(context).getPlayerId.firstOrNull()?.let {
+            currentPlayerId.value = it
+        }
+    }
+
+    // Current date and time
+    val currentDateTime = "2025-04-03 10:33:30"
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
+        Box(
+            modifier = Modifier.fillMaxSize()
         ) {
-
-            // Global, Country and College Rank all in one row
-            Row(
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 20.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
+                    .fillMaxSize()
+                    .padding(16.dp)
             ) {
-                // Global Rank
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "GLOBAL",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Image(
-                        painter = painterResource(id = R.drawable.global),
-                        contentDescription = "Global Badge",
-                        modifier = Modifier.size(48.dp)
-                    )
-                    Text(
-                        text = "#$globalRank",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                // Country Rank
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "COUNTRY",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Image(
-                        painter = painterResource(id = R.drawable.country),
-                        contentDescription = "Country Badge",
-                        modifier = Modifier.size(48.dp)
-                    )
-                    Text(
-                        text = "#$countryRank",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                // College Rank
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "COLLEGE",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Image(
-                        painter = painterResource(id = R.drawable.college),
-                        contentDescription = "College Badge",
-                        modifier = Modifier.size(48.dp)
-                    )
-                    Text(
-                        text = "#$collegeRank",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-
-            // Dropdown for leaderboard selection with arrow indicator
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp)
-            ) {
-                OutlinedButton(
-                    onClick = { expanded = true },
+                // Header with date
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp),
-                    shape = RoundedCornerShape(8.dp)
+                        .padding(bottom = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    Text(
+                        text = "Leaderboard",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = currentDateTime,
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
+                }
+
+                // Table Headers
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.primaryContainer)
+                        .padding(vertical = 12.dp, horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Rank",
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.width(45.dp),
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = "Player ID",
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f),
+                        textAlign = TextAlign.Left
+                    )
+                    Text(
+                        text = "Matches",
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.width(60.dp),
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = "Won",
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.width(45.dp),
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = "Loss",
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.width(45.dp),
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = "Points",
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.width(55.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                if (leaderboardEntries.isEmpty() && !isLoading) {
+                    // Empty state
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = when (selectedLeaderboardType) {
-                                LeaderboardType.GLOBAL -> "Global Leaderboard"
-                                LeaderboardType.COUNTRY -> "Country Leaderboard"
-                                LeaderboardType.COLLEGE -> "College Leaderboard"
-                            },
-                            fontSize = 16.sp
-                        )
-                        Icon(
-                            imageVector = Icons.Default.ArrowDropDown,
-                            contentDescription = "Dropdown Arrow"
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "No leaderboard data available",
+                                color = Color.Gray,
+                                fontSize = 16.sp
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Button(
+                                onClick = { viewModel.fetchLeaderboard() }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = "Refresh"
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Refresh")
+                            }
+                        }
+                    }
+                } else {
+                    // Leaderboard list - sorted by points
+                    LazyColumn(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        items(leaderboardEntries.sortedByDescending { it.points }) { entry ->
+                            LeaderboardRow(
+                                entry = entry,
+                                currentUser = currentPlayerId.value
+                            )
+                            Divider(color = Color.LightGray, thickness = 0.5.dp)
+                        }
                     }
                 }
+            }
 
-                DropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false },
+            // Loading indicator
+            if (isLoading) {
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth(0.9f)
-                        .background(MaterialTheme.colorScheme.surface)
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.4f)),
+                    contentAlignment = Alignment.Center
                 ) {
-                    DropdownMenuItem(
-                        text = { Text("Global Leaderboard") },
-                        onClick = {
-                            selectedLeaderboardType = LeaderboardType.GLOBAL
-                            expanded = false
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Country Leaderboard") },
-                        onClick = {
-                            selectedLeaderboardType = LeaderboardType.COUNTRY
-                            expanded = false
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("College Leaderboard") },
-                        onClick = {
-                            selectedLeaderboardType = LeaderboardType.COLLEGE
-                            expanded = false
-                        }
-                    )
+                    CircularProgressIndicator()
                 }
             }
 
-            // Table Headers
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.primaryContainer)
-                    .padding(vertical = 12.dp, horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Rank",
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.width(45.dp),
-                    textAlign = TextAlign.Center
+            // Error message
+            error?.let { errorMessage ->
+                SnackbarHost(
+                    hostState = remember { SnackbarHostState() }.also {
+                        LaunchedEffect(errorMessage) {
+                            it.showSnackbar(errorMessage)
+                        }
+                    },
+                    modifier = Modifier.align(Alignment.BottomCenter)
                 )
-                Text(
-                    text = "Player ID",
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f),
-                    textAlign = TextAlign.Left
-                )
-                Text(
-                    text = "Matches",
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.width(60.dp),
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    text = "Won",
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.width(45.dp),
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    text = "Loss",
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.width(45.dp),
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    text = "Points",
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.width(55.dp),
-                    textAlign = TextAlign.Center
-                )
-            }
-
-            // Leaderboard list
-            LazyColumn {
-                items(dummyEntries.sortedByDescending { it.points }) { entry ->
-                    LeaderboardRow(entry = entry, currentUser = currentUser)
-                    Divider(color = Color.LightGray, thickness = 0.5.dp)
-                }
             }
         }
     }

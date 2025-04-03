@@ -1,9 +1,6 @@
 package com.example.hectoclash.data.network
 
-import com.example.hectoclash.data.models.AuthResponse
-import com.example.hectoclash.data.models.OnlineUserResponse
-import com.example.hectoclash.data.models.SignInRequest
-import com.example.hectoclash.data.models.SignUpRequest
+import com.example.hectoclash.data.models.*
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -18,11 +15,16 @@ interface ApiService {
     suspend fun signUp(@Body request: SignUpRequest): Response<AuthResponse>
 
     // Protected endpoints that require authorization
-    // Add your protected endpoints here
     @GET("api/user/profile")
-    suspend fun getUserProfile(): Response<Any> // Replace 'Any' with your actual response type
+    suspend fun getUserProfile(): Response<Any>
 
     // New endpoint to get online users
     @GET("api/users/online-users")
     suspend fun getOnlineUsers(): Response<List<OnlineUserResponse>>
+    
+    // Leaderboard endpoints
+    @GET("api/leaderboard/leaderboard")
+    suspend fun getLeaderboard(): Response<LeaderboardResponse>
+
+
 }
