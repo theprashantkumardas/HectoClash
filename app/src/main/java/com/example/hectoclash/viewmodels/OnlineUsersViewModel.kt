@@ -9,8 +9,14 @@ import androidx.lifecycle.viewModelScope
 import com.example.hectoclash.data.local.TokenManager
 
 import com.example.hectoclash.data.models.OnlineUserResponse
+import com.example.hectoclash.data.models.ReceiveChallengeData
 import com.example.hectoclash.data.repository.OnlineUsersRepository
 import com.example.hectoclash.utils.SocketManager
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -18,66 +24,127 @@ class OnlineUsersViewModel(application: Application) : AndroidViewModel(applicat
 
     private val repository = OnlineUsersRepository.getInstance(application)
     private val tokenManager = TokenManager.getInstance(application)
-    private val userPreferences = TokenManager.getInstance(application)
 
-    private val _onlineUsers = MutableLiveData<List<OnlineUserResponse>>()
-    val onlineUsers: LiveData<List<OnlineUserResponse>> = _onlineUsers
+    // --- Use StateFlow Consistently ---
+    private val _onlineUsers = MutableStateFlow<List<OnlineUserResponse>>(emptyList())
+    val onlineUsers: StateFlow<List<OnlineUserResponse>> = _onlineUsers.asStateFlow()
 
-    private val _isLoading = MutableLiveData<Boolean>()
-    val isLoading: LiveData<Boolean> = _isLoading
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    private val _error = MutableLiveData<String?>()
-    val error: LiveData<String?> = _error
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
+
+    private val _incomingChallenge = MutableStateFlow<ReceiveChallengeData?>(null)
+    val incomingChallenge: StateFlow<ReceiveChallengeData?> = _incomingChallenge.asStateFlow()
+
+    private val _feedbackMessage = MutableStateFlow<String?>(null)
+    val feedbackMessage: StateFlow<String?> = _feedbackMessage.asStateFlow()
+
+    private var listenerJob: Job? = null
 
     init {
-        // Setup socket callback
-        // Setup socket callback
-        SocketManager.setOnlineUsersCallback { users -> // Callback now receives List<OnlineUserResponse>
-            Log.d("OnlineUsersViewModel", "Received users from socket: ${users.size}")
-            // Directly update the LiveData with the list from the socket
-            _onlineUsers.postValue(users) // Use postValue if called from background thread in SocketManager
-            _isLoading.postValue(false) // Ensure loading is stopped
-            _error.postValue(null) // Clear any previous error
-        }
+        Log.d("OnlineUsersViewModel", "Initializing and starting listeners.")
+        startListeningToSocketEvents()
+        fetchOnlineUsers() // Initial fetch
+    }
 
-        // Connect to socket if we have userId
-        viewModelScope.launch {
-            val userId = userPreferences.getUserId.first()
-            if (!userId.isNullOrEmpty()) {
-                SocketManager.connect(userId)
+    private fun startListeningToSocketEvents() {
+        if (listenerJob?.isActive == true) {
+            Log.d("OnlineUsersViewModel", "Listener job already active.")
+            return
+        }
+        Log.d("OnlineUsersViewModel", "Starting SocketManager flow listeners.")
+        listenerJob = viewModelScope.launch {
+            // Observe Online Users
+            launch {
+                SocketManager.onlineUsersFlow
+                    .catch { e -> Log.e("OnlineUsersViewModel", "Error onlineUsersFlow: ${e.message}") }
+                    .collect { users ->
+                        Log.d("OnlineUsersViewModel", "Received ${users.size} online users from flow")
+                        _onlineUsers.value = users
+                        _isLoading.value = false // Stop loading when data arrives via socket
+                        _error.value = null // Clear error on success
+                    }
+            }
+            // Observe Incoming Challenges
+            launch {
+                SocketManager.challengeReceivedFlow
+                    .catch { e -> Log.e("OnlineUsersViewModel", "Error challengeReceivedFlow: ${e.message}") }
+                    .collect { challenge ->
+                        Log.d("OnlineUsersViewModel", "Challenge received from ${challenge.challengerName}")
+                        _incomingChallenge.value = challenge
+                    }
+            }
+            // Observe Challenge Rejections
+            launch {
+                SocketManager.challengeRejectedFlow
+                    .catch { e -> Log.e("OnlineUsersViewModel", "Error challengeRejectedFlow: ${e.message}") }
+                    .collect { rejection ->
+                        Log.d("OnlineUsersViewModel", "Challenge rejected by ${rejection.opponentName}")
+                        _feedbackMessage.value = "${rejection.opponentName} declined your challenge."
+                    }
+            }
+            // Observe Challenge Failures
+            launch {
+                SocketManager.challengeFailedFlow
+                    .catch { e -> Log.e("OnlineUsersViewModel", "Error challengeFailedFlow: ${e.message}") }
+                    .collect { failure ->
+                        Log.w("OnlineUsersViewModel", "Challenge failed: ${failure.reason}")
+                        _feedbackMessage.value = "Challenge failed: ${failure.reason}"
+                    }
             }
         }
     }
 
-    // Keep fetchOnlineUsers for initial load or manual refresh
+    // Fetch via HTTP for initial load or manual refresh
     fun fetchOnlineUsers() {
+        if (_isLoading.value) return
         viewModelScope.launch {
+            Log.d("OnlineUsersViewModel", "Fetching online users via HTTP GET...")
             _isLoading.value = true
             _error.value = null
-            Log.d("OnlineUsersViewModel", "Fetching online users via HTTP GET")
             try {
                 repository.getOnlineUsers().fold(
                     onSuccess = { users ->
+                        // Don't necessarily overwrite if socket has already provided data,
+                        // but useful for manual refresh. Check timestamp? Or just update.
                         _onlineUsers.value = users
                         Log.d("OnlineUsersViewModel", "HTTP GET successful: ${users.size} users")
                     },
                     onFailure = { exception ->
-                        _error.value = exception.message ?: "Failed to fetch users"
-                        Log.e("OnlineUsersViewModel", "HTTP GET failed: ${exception.message}")
+                        val errorMsg = exception.message ?: "Failed to fetch users"
+                        _error.value = errorMsg
+                        Log.e("OnlineUsersViewModel", "HTTP GET failed: $errorMsg")
                     }
                 )
             } catch (e: Exception) {
-                _error.value = "Error: ${e.message}"
-                Log.e("OnlineUsersViewModel", "HTTP GET exception: ${e.message}")
+                val errorMsg = "Network error: ${e.message}"
+                _error.value = errorMsg
+                Log.e("OnlineUsersViewModel", "HTTP GET exception: $errorMsg", e)
             } finally {
-                _isLoading.value = false
+                // Only set loading false here if there was an error,
+                // otherwise let the socket flow update handle it.
+                if (_error.value != null) _isLoading.value = false
+                // Or simply always set it false after HTTP attempt completes:
+                // _isLoading.value = false
             }
         }
     }
 
+    // Respond to an incoming challenge
+    fun respondToChallenge(challengerId: String, accept: Boolean) {
+        Log.d("OnlineUsersViewModel", "Responding to challenge from $challengerId. Accept: $accept")
+        _incomingChallenge.value = null // Dismiss dialog
+        SocketManager.emitRespondChallenge(challengerId, accept)
+    }
+
+    fun clearIncomingChallenge() { _incomingChallenge.value = null }
+    fun clearFeedbackMessage() { _feedbackMessage.value = null }
+
     override fun onCleared() {
         super.onCleared()
-        // No need to disconnect here as SocketManager is an object
-        // and might be used by other screens
+        Log.d("OnlineUsersViewModel", "ViewModel cleared. Cancelling listener job.")
+        listenerJob?.cancel()
     }
 }
