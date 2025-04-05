@@ -22,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -86,7 +87,8 @@ fun HomeScreen(mainNavController: NavHostController) { // Correct parameter type
                 BottomNavItem.Profile
             )
 
-            NavigationBar { // Use Material3 NavigationBar
+            NavigationBar ( containerColor = Color.Black){ // Use Material3 NavigationBar
+
                 bottomNavItems.forEach { item ->
                     val selected = currentDestination?.hierarchy?.any { it.route == item.route } == true
                     NavigationBarItem(
