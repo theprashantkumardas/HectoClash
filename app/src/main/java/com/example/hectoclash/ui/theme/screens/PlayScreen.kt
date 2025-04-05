@@ -14,10 +14,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.hectoclash.navigation.Screen
+import com.example.hectoclash.navigation.Routes
 
 @Composable
-fun PlayScreen(navController: NavController) {
+fun PlayScreen(mainNavController: NavController) { // Parameter name is fine
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -26,43 +26,46 @@ fun PlayScreen(navController: NavController) {
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "Play",
+            text = "Let's Play!",
             style = MaterialTheme.typography.headlineLarge,
             modifier = Modifier.padding(bottom = 32.dp),
             textAlign = TextAlign.Center
         )
 
-
+        // Use mainNavController to navigate using Routes constants
         ButtonOption(
             text = "Play Online",
             icon = Icons.Filled.Public,
-            onClick = { navController.navigate(Screen.OnlineUsers.route) },
+            // Use Routes object here
+            onClick = { mainNavController.navigate(Routes.PLAY_ONLINE) },
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
         ButtonOption(
             text = "Play with Friend",
             icon = Icons.Filled.Group,
-            onClick = { navController.navigate(Screen.FriendsList.route) },
+            // Use Routes object here
+            onClick = { mainNavController.navigate(Routes.FRIENDS_LIST) },
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
         ButtonOption(
             text = "Practice",
             icon = Icons.Filled.SportsEsports,
-            onClick = { /* Handle practice */ },
+            onClick = { /* TODO: Implement Practice Navigation/Logic (e.g., mainNavController.navigate(Routes.PRACTICE)) */ },
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
         ButtonOption(
             text = "Watch Live Match",
             icon = Icons.Filled.LiveTv,
-            onClick = { /* Handle watch live match */ },
+            onClick = { /* TODO: Implement Spectator Navigation/Logic (e.g., mainNavController.navigate(Routes.SPECTATE)) */ },
             modifier = Modifier.padding(bottom = 16.dp)
         )
     }
 }
 
+// ButtonOption Composable (No changes needed)
 @Composable
 fun ButtonOption(
     text: String,
@@ -78,14 +81,15 @@ fun ButtonOption(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
+            horizontalArrangement = Arrangement.Start,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
         ) {
             Icon(
                 imageVector = icon,
-                contentDescription = text,
+                contentDescription = null,
                 modifier = Modifier.size(24.dp)
             )
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(16.dp))
             Text(
                 text = text,
                 style = MaterialTheme.typography.titleMedium

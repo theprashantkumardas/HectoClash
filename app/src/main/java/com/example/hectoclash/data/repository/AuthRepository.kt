@@ -89,7 +89,9 @@ class AuthRepository(private val context: Context) {
     suspend fun getProtectedData(): Result<Any> {
         return withContext(Dispatchers.IO) {
             try {
-                val response = RetrofitClient.getAuthenticatedApiService(context).getUserProfile()
+                val response = RetrofitClient.getAuthenticatedApiService(context).getUserProfile(
+                    userId = TODO()
+                )
 
                 if (response.isSuccessful) {
                     response.body()?.let {
