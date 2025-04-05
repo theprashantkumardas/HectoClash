@@ -2,7 +2,9 @@ package com.example.hectoclash.utils
 
 import android.util.Log
 import com.example.hectoclash.data.models.ChallengeFailedData
+import com.example.hectoclash.data.models.ChallengeOverData
 import com.example.hectoclash.data.models.ChallengeRejectedData
+import com.example.hectoclash.data.models.ChallengeStartData
 import com.example.hectoclash.data.models.ChallengeUserData
 import com.example.hectoclash.data.models.FriendRemovedData
 import com.example.hectoclash.data.models.FriendRequestAcceptedData
@@ -11,10 +13,13 @@ import com.example.hectoclash.data.models.FriendRequestRejectedData
 import com.example.hectoclash.data.models.GameOverData
 import com.example.hectoclash.data.models.GameStartData
 import com.example.hectoclash.data.models.GameStartFailedData
+import com.example.hectoclash.data.models.NewRoundData
 import com.example.hectoclash.data.models.OnlineUserResponse
 import com.example.hectoclash.data.models.ReceiveChallengeData
 import com.example.hectoclash.data.models.RespondChallengeData
+import com.example.hectoclash.data.models.RoundOverData
 import com.example.hectoclash.data.models.SolutionInvalidData
+import com.example.hectoclash.data.models.SolutionResultData
 import com.example.hectoclash.data.models.SubmitSolutionData
 import com.example.hectoclash.utils.Constants.BASE_URL
 import com.google.gson.Gson
@@ -30,38 +35,6 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.net.URISyntaxException
 
-//object SocketManager {
-//    private const val SERVER_URL = BASE_URL // Change this
-//
-//    var socket: Socket? = null
-//
-//    fun connect(userId: String) {
-//        try {
-//            socket = IO.socket(SERVER_URL)
-//            socket?.connect()
-//
-//            socket?.on(Socket.EVENT_CONNECT) {
-//                Log.d("Socket", "Connected to server")
-//                socket?.emit("user-online", userId) // Send user ID to server
-//            }
-//
-//            socket?.on("update-online-users") { args ->
-//                val onlineUsers = args[0] as? List<String> ?: emptyList()
-//                Log.d("Socket", "Online Users: $onlineUsers")
-//            }
-//
-//            socket?.on(Socket.EVENT_DISCONNECT) {
-//                Log.d("Socket", "Disconnected from server")
-//            }
-//        } catch (e: Exception) {
-//            Log.e("Socket", "Error: ${e.message}")
-//        }
-//    }
-//
-//    fun disconnect() {
-//        socket?.disconnect()
-//    }
-//}
 
 object SocketManager {
     private const val TAG = "SocketManager"
@@ -117,6 +90,22 @@ object SocketManager {
     private val _friendRemovedFlow = MutableSharedFlow<FriendRemovedData>(replay = 0)
     val friendRemovedFlow = _friendRemovedFlow.asSharedFlow()
 
+    // --- NEW Flows for Multi-Round Game ---
+    private val _challengeStartFlow = MutableSharedFlow<ChallengeStartData>(replay = 1) // <--- CHANGE replay to 1
+    val challengeStartFlow = _challengeStartFlow.asSharedFlow()
+
+    private val _newRoundFlow = MutableSharedFlow<NewRoundData>(replay = 0)
+    val newRoundFlow = _newRoundFlow.asSharedFlow()
+
+    private val _solutionResultFlow = MutableSharedFlow<SolutionResultData>(replay = 0)
+    val solutionResultFlow = _solutionResultFlow.asSharedFlow()
+
+    private val _roundOverFlow = MutableSharedFlow<RoundOverData>(replay = 0)
+    val roundOverFlow = _roundOverFlow.asSharedFlow()
+
+    private val _challengeOverFlow = MutableSharedFlow<ChallengeOverData>(replay = 0)
+    val challengeOverFlow = _challengeOverFlow.asSharedFlow()
+    // --- END NEW Flows ---
 
     fun initialize() {
         // Prevent re-initialization if socket already exists
@@ -227,9 +216,30 @@ object SocketManager {
             parseAndEmit(args, _gameStartFlow, GameStartData::class.java, "game_start")
         }
 
+        // --- NEW Event Listeners ---
+        socket?.on("challenge_start") { args -> // Listen for new event
+            parseAndEmit(args, _challengeStartFlow, ChallengeStartData::class.java, "challenge_start")
+        }
+
         // Game Over
         socket?.on("game_over") { args ->
             parseAndEmit(args, _gameOverFlow, GameOverData::class.java, "game_over")
+        }
+
+        socket?.on("new_round") { args ->
+            parseAndEmit(args, _newRoundFlow, NewRoundData::class.java, "new_round")
+        }
+
+        socket?.on("solution_result") { args -> // Listen for new event
+            parseAndEmit(args, _solutionResultFlow, SolutionResultData::class.java, "solution_result")
+        }
+
+        socket?.on("round_over") { args ->
+            parseAndEmit(args, _roundOverFlow, RoundOverData::class.java, "round_over")
+        }
+
+        socket?.on("challenge_over") { args -> // Listen for new event
+            parseAndEmit(args, _challengeOverFlow, ChallengeOverData::class.java, "challenge_over")
         }
 
         // Solution Invalid

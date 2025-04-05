@@ -3,8 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
 
-    kotlin("kapt")
-    id("dagger.hilt.android.plugin")
+//    kotlin("kapt")
+//    id("dagger.hilt.android.plugin")
 }
 
 android {
@@ -63,7 +63,9 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
 
     // Jetpack Compose Navigation
-    implementation("androidx.navigation:navigation-compose:2.8.7")
+    implementation("androidx.navigation:navigation-compose:2.8.9")
+
+
 
     // Retrofit
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
@@ -75,9 +77,9 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.5.0")
 
     // Hilt (Dependency Injection)
-    implementation("com.google.dagger:hilt-android:2.48.1")
-    kapt("com.google.dagger:hilt-compiler:2.48.1")
-    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+//    implementation("com.google.dagger:hilt-android:2.48.1")
+//    kapt("com.google.dagger:hilt-compiler:2.48.1")
+//    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
     // Socket.IO for real-time gameplay
     implementation("io.socket:socket.io-client:2.1.0")
