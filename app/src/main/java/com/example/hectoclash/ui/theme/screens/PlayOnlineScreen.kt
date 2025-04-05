@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SportsKabaddi
+import androidx.compose.material.icons.filled.SportsScore
 import androidx.compose.material.icons.filled.VideogameAsset
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,11 +28,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.hectoclash.data.local.TokenManager
-
 import com.example.hectoclash.data.models.OnlineUserResponse
 import com.example.hectoclash.data.models.ReceiveChallengeData
 import com.example.hectoclash.utils.SocketManager
-
 import com.example.hectoclash.viewmodels.OnlineUsersViewModel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -40,11 +39,10 @@ import kotlinx.coroutines.launch
 @Composable
 fun PlayOnlineScreen(
     onBackClick: () -> Unit,
-    onViewProfile: (userId: String) -> Unit, // Add callback to view profile
-    // onChallengeUser callback is now handled internally by emitting socket event
-    viewModel: OnlineUsersViewModel = viewModel() // Use Hilt or manual Factory if needed
+    onViewProfile: (userId: String) -> Unit,
+    viewModel: OnlineUsersViewModel = viewModel()
 ) {
-    // Observe StateFlow from ViewModel
+    // Existing state collection
     val onlineUsers by viewModel.onlineUsers.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
@@ -53,47 +51,49 @@ fun PlayOnlineScreen(
 
     val context = LocalContext.current
     val tokenManager = remember { TokenManager.getInstance(context) }
-    val snackbarHostState = remember { SnackbarHostState() } // For showing feedback
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    // Get current user ID
     var currentUserId by remember { mutableStateOf("") }
 
     LaunchedEffect(key1 = tokenManager) {
         currentUserId = tokenManager.getUserId.first() ?: ""
-        // Initial fetch is now handled in ViewModel's init block
-        // viewModel.fetchOnlineUsers()
         Log.d("PlayOnlineScreen", "Current User ID: $currentUserId")
     }
 
-    // Show feedback messages (like challenge rejected) in a Snackbar
     LaunchedEffect(feedbackMessage) {
         feedbackMessage?.let { message ->
             snackbarHostState.showSnackbar(
                 message = message,
                 duration = SnackbarDuration.Short
             )
-            viewModel.clearFeedbackMessage() // Clear message after showing
+            viewModel.clearFeedbackMessage()
         }
     }
 
-
     Scaffold(
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }, // Add SnackbarHost
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Online Players") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        // Use appropriate back icon
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
+                    // Make refresh button more prominent
                     IconButton(
                         onClick = { viewModel.fetchOnlineUsers() },
-                        enabled = !isLoading // Disable refresh while loading
+                        enabled = !isLoading
                     ) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = "Refresh",
+                            // Increase icon size for better visibility
+                            modifier = Modifier.size(28.dp),
+                            // Use a contrasting color to make it stand out
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
             )
@@ -106,7 +106,7 @@ fun PlayOnlineScreen(
                 .padding(16.dp)
         ) {
             when {
-                isLoading && onlineUsers.isEmpty() -> { // Show loading only if list is empty initially
+                isLoading && onlineUsers.isEmpty() -> {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
                 error != null -> {
@@ -120,74 +120,89 @@ fun PlayOnlineScreen(
                             color = MaterialTheme.colorScheme.error,
                             modifier = Modifier.padding(bottom = 16.dp)
                         )
-                        Button(onClick = { viewModel.fetchOnlineUsers() }) {
-                            Text("Retry")
-                        }
+//                        Button(onClick = { viewModel.fetchOnlineUsers() }) {
+//                            Icon(
+//                                Icons.Default.Refresh,
+//                                contentDescription = null,
+//                                modifier = Modifier.size(ButtonDefaults.IconSize)
+//                            )
+//                            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+//                            Text("Refresh")
+//                        }
                     }
                 }
                 onlineUsers.isEmpty() && !isLoading -> {
-                    Text(
-                        text = "No players online right now.",
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-//                else -> {
-//                    // Filter out the current user from the list
-//                    val displayUsers = onlineUsers.filter { it._id != currentUserId }
-//
-//                    if (displayUsers.isEmpty() && currentUserId.isNotEmpty()) {
-//                        Text(
-//                            text = "You are the only player online!",
-//                            modifier = Modifier.align(Alignment.Center)
-//                        )
-//                    } else if (displayUsers.isNotEmpty()) {
-//                        Column {
-//                            Text(
-//                                text = "Choose an opponent to challenge",
-//                                style = MaterialTheme.typography.titleMedium,
-//                                modifier = Modifier.padding(bottom = 16.dp)
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "No players online right now",
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+//                        Button(onClick = { viewModel.fetchOnlineUsers() }) {
+//                            Icon(
+//                                Icons.Default.Refresh,
+//                                contentDescription = null,
+//                                modifier = Modifier.size(ButtonDefaults.IconSize)
 //                            )
-//                            LazyColumn(
-//                                verticalArrangement = Arrangement.spacedBy(10.dp)
-//                            ) {
-//                                items(displayUsers, key = { user -> user._id }) { user ->
-//                                    UserItem(
-//                                        user = user,
-//                                        // onClick now emits the challenge event
-//                                        onClick = {
-//                                            Log.d("PlayOnlineScreen", "Challenge button clicked for ${user.name}")
-//                                            viewModel.viewModelScope.launch {
-//                                                snackbarHostState.showSnackbar("Challenging ${user.name}...")
-//                                            }
-//                                            SocketManager.emitChallengeUser(user._id)
-//                                        }
-//                                    )
-//                                }
-//                            }
+//                            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+//                            Text("Refresh")
 //                        }
-//                    }
-//                }
+                    }
+                }
                 else -> {
                     val displayUsers = onlineUsers.filter { it._id != currentUserId }
-                    // ... empty check ...
-                    if (displayUsers.isNotEmpty()) {
+
+                    if (displayUsers.isEmpty() && currentUserId.isNotEmpty()) {
+                        Column(
+                            modifier = Modifier.align(Alignment.Center),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "You are the only player online!",
+                                color = Color.White,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Button(onClick = { viewModel.fetchOnlineUsers() }) {
+                                Icon(
+                                    Icons.Default.Refresh,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(ButtonDefaults.IconSize)
+                                )
+                                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                                Text("Refresh")
+                            }
+                        }
+                    } else if (displayUsers.isNotEmpty()) {
                         Column {
-                            // ... "Choose opponent" text ...
-                            LazyColumn( /* ... */ ) {
+                            Text(
+                                text = "Choose an opponent to challenge",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color.White,
+                                modifier = Modifier.padding(bottom = 16.dp)
+                            )
+
+                            // Increased spacing between items to 16.dp
+                            LazyColumn(
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
                                 items(displayUsers, key = { user -> user._id }) { user ->
                                     UserItem(
                                         user = user,
-                                        onChallengeClick = { // Renamed for clarity
+                                        onChallengeClick = {
                                             Log.d("PlayOnlineScreen", "Challenge button clicked for ${user.name}")
-                                            // Show Snackbar feedback immediately
                                             viewModel.viewModelScope.launch {
                                                 snackbarHostState.showSnackbar("Challenging ${user.name}...")
                                             }
                                             SocketManager.emitChallengeUser(user._id)
                                         },
-                                        onViewProfileClick = { // New handler
+                                        onViewProfileClick = {
                                             Log.d("PlayOnlineScreen", "View Profile clicked for ${user.name}")
-                                            onViewProfile(user._id) // Navigate using callback
+                                            onViewProfile(user._id)
                                         }
                                     )
                                 }
@@ -197,7 +212,6 @@ fun PlayOnlineScreen(
                 }
             }
 
-            // --- Incoming Challenge Dialog ---
             incomingChallenge?.let { challenge ->
                 IncomingChallengeDialog(
                     challengeData = challenge,
@@ -211,8 +225,7 @@ fun PlayOnlineScreen(
                     },
                     onDismiss = {
                         Log.d("PlayOnlineScreen", "Dismissing challenge dialog (implies decline)")
-                        viewModel.respondToChallenge(challenge.challengerId, false) // Treat dismiss as decline
-                        // Or use viewModel.clearIncomingChallenge() if dismiss shouldn't auto-decline
+                        viewModel.respondToChallenge(challenge.challengerId, false)
                     }
                 )
             }
@@ -224,31 +237,33 @@ fun PlayOnlineScreen(
 fun UserItem(
     user: OnlineUserResponse,
     onChallengeClick: () -> Unit,
-    onViewProfileClick: () -> Unit // Add callback
+    onViewProfileClick: () -> Unit
 ) {
+    // Define light red color for the challenge button
+    val lightRedColor = Color(0xFFFF6B6B) // Adjust this hex code for desired shade of light red
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        // onClick is now on the Button, not the whole card
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp) // Increased elevation for better visual separation
     ) {
         Row(
             modifier = Modifier
                 .padding(horizontal = 16.dp, vertical = 12.dp)
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween // Pushes button to the end
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .weight(1f) // Take available space before buttons
-                    .clickable(onClick = onViewProfileClick) // Make user info clickable
-                    .padding(end = 8.dp) // Add padding before buttons
+                    .weight(1f)
+                    .clickable(onClick = onViewProfileClick)
+                    .padding(end = 8.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Person,
-                    contentDescription = null, // Decorative
+                    contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(40.dp)
                 )
@@ -257,32 +272,39 @@ fun UserItem(
                     Text(
                         text = user.name,
                         fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.bodyLarge
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color.White // Changed username text color to white
                     )
                     Text(
-                        text = user.playerId, // Display Player ID
+                        text = user.playerId,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = Color.White.copy(alpha = 0.7f) // Light white for player ID
                     )
                 }
             }
 
             // Action Buttons
             Row {
-                // Challenge Button - Moved inside Card's Row
-                Button(onClick = onChallengeClick) {
-                    Icon(Icons.Default.VideogameAsset, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                // Challenge Button with light red color
+                Button(
+                    onClick = onChallengeClick,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = lightRedColor, // Light red color
+                        contentColor = Color.White
+                    )
+                ) {
+                    Icon(
+                        Icons.Default.VideogameAsset,
+                        contentDescription = null,
+                        modifier = Modifier.size(ButtonDefaults.IconSize)
+                    )
                     Spacer(Modifier.size(ButtonDefaults.IconSpacing))
                     Text("Challenge")
                 }
             }
-
-
-
         }
     }
 }
-
 
 @Composable
 fun IncomingChallengeDialog(
@@ -292,21 +314,32 @@ fun IncomingChallengeDialog(
     onDismiss: () -> Unit
 ) {
     AlertDialog(
-        onDismissRequest = onDismiss, // Call onDismiss when clicking outside or back button
-        icon = { Icon(Icons.Default.SportsKabaddi, contentDescription = "Challenge Icon") },
-        title = { Text("Incoming Challenge!") },
-        text = { Text("${challengeData.challengerName} wants to play HectoClash with you!") },
-        confirmButton = {
-            Button(onClick = onAccept) {
-                Text("Accept")
-            }
+        onDismissRequest = onDismiss,
+        containerColor = Color.DarkGray, // Change background to grey
+        title = {
+            Text(
+                "Incoming Challenge!",
+                color = Color.White
+            )
         },
+        text = {
+            Text(
+                "${challengeData.challengerName} wants to play HectoClash with you!",
+                color = Color.White.copy(alpha = 0.8f)
+            )
+        },
+        // Switch the order - dismissButton is shown first (left)
         dismissButton = {
             Button(
                 onClick = onDecline,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
             ) {
                 Text("Decline")
+            }
+        },
+        confirmButton = {
+            Button(onClick = onAccept) {
+                Text("Accept")
             }
         }
     )

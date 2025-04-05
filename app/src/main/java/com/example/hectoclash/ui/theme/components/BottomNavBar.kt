@@ -2,7 +2,9 @@ package com.example.hectoclash.ui.theme.components
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CurrencyBitcoin
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.SportsEsports
@@ -23,10 +25,10 @@ sealed class BottomNavItem(val route: String, val title: String, val icon: Image
     // Use the route defined for the *nested* nav graph in Home
     // If you decided FriendsListScreen is hosted within Home, use its nested route name.
     // Assuming you added HOME_FRIENDS_TAB in Routes:
-    object Friends : BottomNavItem(Routes.HOME_FRIENDS_TAB, "Friends", Icons.Filled.People)
+    object Friends : BottomNavItem(Routes.HOME_FRIENDS_TAB, "COTD", Icons.Filled.CurrencyBitcoin)
     // Or if you still rely on the top-level FRIENDS_LIST route for the tab:
     // object Friends : BottomNavItem(Routes.FRIENDS_LIST, "Friends", Icons.Filled.People) // Choose one consistent approach
-    object Profile : BottomNavItem(Routes.HOME_PROFILE_TAB, "Profile", Icons.Filled.Person)
+    object Profile : BottomNavItem(Routes.HOME_PROFILE_TAB, "More", Icons.Filled.Menu)
 }
 
 @Composable

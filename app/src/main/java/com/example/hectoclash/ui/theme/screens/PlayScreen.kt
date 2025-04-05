@@ -24,7 +24,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.hectoclash.navigation.Routes
 import com.example.hectoclash.ui.theme.DarkBackgroundEnd
@@ -33,7 +32,6 @@ import com.example.hectoclash.ui.theme.GreenAccent
 import com.example.hectoclash.ui.theme.ProfilePink
 import com.example.hectoclash.ui.theme.PurpleFriend
 import com.example.hectoclash.ui.theme.TextOnDarkSecondary
-
 
 // Define data class for friend status (replace with your actual data model)
 data class FriendStatus(val id: String, val name: String, val isOnline: Boolean)
@@ -44,15 +42,16 @@ fun PlayScreen(
 ) {
     // Observe username from ViewModel (replace with your actual state management)
 //    val username by profileViewModel.username.collectAsState() // Example
-    val username = "Player" // Replace with actual username from ViewModel
+    val username = "HectoClash" // Replace with actual username from ViewModel
 
     // Dummy data for friends row - replace with actual data from ViewModel/Repository
     val activeFriends = listOf(
         FriendStatus("1", "Alice", true),
         FriendStatus("2", "Bob", true),
         FriendStatus("3", "Charlie", true),
-        FriendStatus("4", "David", false), // Example offline
-        FriendStatus("5", "Eve", true)
+        FriendStatus("4", "David", true),
+        FriendStatus("5", "Eve", true),
+        FriendStatus("6", "Eve", true)
     )
 
     // Define the background gradient
@@ -123,7 +122,7 @@ fun PlayScreen(
             subtitle = "Battle your friend",
             onClick = {
                 // Navigate to the nested Friends Tab first
-                mainNavController.navigate(Routes.HOME_FRIENDS_TAB) {
+                mainNavController.navigate(Routes.FRIENDS_LIST) {
                     launchSingleTop = true
                 }
                 // Or directly to PLAY_ONLINE if that's where friend challenges happen? Adjust as needed.
@@ -217,29 +216,34 @@ fun FriendIconWithStatus(isOnline: Boolean, onClick: () -> Unit) {
         contentAlignment = Alignment.BottomEnd, // Align status dot to bottom-end
         modifier = Modifier
             .size(40.dp)
-            .clip(CircleShape) // Clip outer box
             .clickable(onClick = onClick)
     ) {
         // Background circle with user icon
-        Icon(
-            imageVector = Icons.Filled.AccountCircle, // Consistent icon
-            contentDescription = "Friend Status", // Content description for the whole item
+        Box(
             modifier = Modifier
-                .fillMaxSize()
-                .background(PurpleFriend, CircleShape) // Purple background
-                .padding(4.dp), // Padding inside the background
-            tint = Color.White // Icon color
-        )
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(PurpleFriend)
+                .align(Alignment.Center),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Filled.AccountCircle,
+                contentDescription = "Friend",
+                modifier = Modifier.size(36.dp), // Slightly smaller than background
+                tint = Color.White
+            )
+        }
+
         // Status indicator dot
         if (isOnline) {
             Box(
                 modifier = Modifier
-                    .size(11.dp)
-                    .offset(x = (2).dp, y = (2).dp) // Adjust offset for visibility
-                    .background(Color.Transparent, CircleShape) // Transparent bg for border placement
-                    .border(1.5.dp, DarkBackgroundEnd, CircleShape) // Border matches background
-                    .padding(1.5.dp) // Padding inside the border
-                    .background(GreenAccent, CircleShape) // Inner green dot
+                    .size(12.dp)
+                    .clip(CircleShape)
+                    .border(2.dp, DarkBackgroundEnd, CircleShape) // Border color that matches the background
+                    .background(GreenAccent) // Use GreenAccent directly
+                    .align(Alignment.BottomEnd)
             )
         }
     }
