@@ -39,119 +39,6 @@ import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
-//sealed class Screen(val route: String) {
-//    object SignIn : Screen("sign_in")
-//    object SignUp : Screen("sign_up")
-//    object Home : Screen("home")
-//    object Play : Screen("play")
-//    object Leaderboard : Screen("leaderboard")
-//    object Rewards : Screen("rewards")
-//    object Profile : Screen("profile")
-//    object FriendsList : Screen("friends_list")
-//    object OnlineUsers : Screen("online_users")
-//    object Game : Screen("game/{userId}/{username}/{points}") {
-//        fun createRoute(userId: String, username: String, points: Int): String {
-//            return "game/$userId/$username/$points"
-//        }
-//    }
-//
-//
-//}
-
-/// Define routes more clearly
-//object Routes {
-//    const val SIGN_IN = "sign_in"
-//    const val SIGN_UP = "sign_up"
-//    const val HOME = "home" // Contains bottom nav
-//    const val PLAY_ONLINE = "play_online"
-//    const val FRIENDS_LIST = "friends_list" // Assuming you have this screen
-//    // Game route includes necessary parameters
-//    const val GAME = "game/{gameId}/{puzzle}/{opponentName}/{opponentId}/{timeLimitSeconds}"
-//
-//    // Helper function to create the game route safely encoding params
-//    fun createGameRoute(
-//        gameId: String,
-//        puzzle: String,
-//        opponentName: String,
-//        opponentId: String,
-//        timeLimitSeconds: Int
-//    ): String {
-//        val encodedPuzzle = URLEncoder.encode(puzzle, StandardCharsets.UTF_8.toString())
-//        val encodedOpponentName = URLEncoder.encode(opponentName, StandardCharsets.UTF_8.toString())
-//        return "game/$gameId/$encodedPuzzle/$encodedOpponentName/$opponentId/$timeLimitSeconds"
-//    }
-//}
-
-
-//@Composable
-//fun AppNavigation() {
-//    val navController = rememberNavController()
-//    val context = LocalContext.current
-//    val tokenManager = remember { TokenManager.getInstance(context) }
-//
-//    // Check login state
-//    var startDestination by remember { mutableStateOf(Screen.SignIn.route) }
-//
-//    LaunchedEffect(Unit) {
-//        val token = tokenManager.getToken.firstOrNull()
-//        if (!token.isNullOrEmpty()) {
-//            startDestination = Screen.Home.route // Set start destination to Home if user is logged in
-//        }
-//    }
-//
-//    NavHost(navController = navController, startDestination = startDestination) {
-//        composable(Screen.SignIn.route) {
-//            SignInScreen(navController)
-//        }
-//
-//        composable(Screen.SignUp.route) {
-//            SignUpScreen(navController)
-//        }
-//
-//        composable(Screen.Home.route) {
-//            HomeScreen(navController)
-//        }
-//
-//        composable(Screen.Profile.route) {
-//            ProfileScreen(onLogout = {
-//                navController.navigate(Screen.SignIn.route) {
-//                    popUpTo(Screen.Home.route) { inclusive = true }
-//                }
-//            })
-//        }
-//
-//        composable(Screen.FriendsList.route) {
-//            FriendsListScreen(navController)
-//        }
-//
-//        composable(Screen.OnlineUsers.route) {
-//            PlayOnlineScreen(
-//                onBackClick = { navController.popBackStack() },
-//                onChallengeUser = { user ->
-//                    val route = Screen.Game.createRoute(
-//                        user._id, user.name,
-//                        points = TODO(),
-//                    )
-//                    navController.navigate(route)
-//                }
-//            )
-//        }
-//
-//        composable(
-//            Screen.Game.route,
-//            arguments = listOf(
-//                navArgument("userId") { type = NavType.StringType },
-//                navArgument("username") { type = NavType.StringType },
-//                navArgument("points") { type = NavType.IntType }
-//            )
-//        ) { backStackEntry ->
-//            val userId = backStackEntry.arguments?.getString("userId") ?: ""
-//            val username = backStackEntry.arguments?.getString("username") ?: ""
-//            val points = backStackEntry.arguments?.getInt("points") ?: 0
-//            GameScreen(userId, username, points)
-//        }
-//    }
-//}
 
 object Routes {
     // --- Top Level Routes ---
@@ -163,7 +50,7 @@ object Routes {
 
     const val USER_PROFILE = "user_profile/{userId}" // Route for user profile
 
-    const val GAME = "game/{gameId}/{puzzle}/{opponentName}/{opponentId}/{timeLimitSeconds}"
+    const val GAME = "game/{gameId}/{opponentName}/{opponentId}"
 
 
 
@@ -178,15 +65,15 @@ object Routes {
     // --- Helper Functions ---
     fun createGameRoute(
         gameId: String,
-        puzzle: String,
+//        puzzle: String,
         opponentName: String,
         opponentId: String,
-        timeLimitSeconds: Int
+//        timeLimitSeconds: Int
     ): String {
         // Encoding remains the same
-        val encodedPuzzle = URLEncoder.encode(puzzle, StandardCharsets.UTF_8.toString())
+//        val encodedPuzzle = URLEncoder.encode(puzzle, StandardCharsets.UTF_8.toString())
         val encodedOpponentName = URLEncoder.encode(opponentName, StandardCharsets.UTF_8.toString())
-        return "game/$gameId/$encodedPuzzle/$encodedOpponentName/$opponentId/$timeLimitSeconds"
+        return "game/$gameId/$encodedOpponentName/$opponentId"
     }
 
     // *** ADD THIS FUNCTION BACK ***
@@ -225,28 +112,50 @@ fun AppNavigation() {
     }
 
     // Listener for Game Start event to trigger navigation
-    LaunchedEffect(key1 = SocketManager.gameStartFlow) {
-        SocketManager.gameStartFlow.collect { gameData ->
-            Log.d("AppNavigation", "Game Start Flow Collected: ${gameData.gameId}")
+//    LaunchedEffect(key1 = SocketManager.gameStartFlow) {
+//        SocketManager.gameStartFlow.collect { gameData ->
+//            Log.d("AppNavigation", "Game Start Flow Collected: ${gameData.gameId}")
+//            // Determine opponent details based on current user ID
+//            val currentUserId = tokenManager.getUserId.firstOrNull() ?: ""
+//            val opponent =
+//                if (gameData.player1.id == currentUserId) gameData.player2 else gameData.player1
+//
+//            val route = Routes.createGameRoute(
+//                gameId = gameData.gameId,
+////                puzzle = gameData.puzzle,
+//                opponentName = opponent.name,
+//                opponentId = opponent.id,
+////                timeLimitSeconds = gameData.timeLimitSeconds
+//            )
+//            Log.d("AppNavigation", "Navigating to Game: $route")
+//            navController.navigate(route) {
+//                // Optional: Pop up to home or clear back stack if needed
+//                // popUpTo(Routes.HOME)
+//            }
+//        }
+//    }
+
+    // *** CORRECTED LaunchedEffect ***
+    LaunchedEffect(key1 = SocketManager.challengeStartFlow) { // <-- LISTEN TO NEW FLOW
+        SocketManager.challengeStartFlow.collect { challengeData -> // <-- COLLECT FROM NEW FLOW, use correct variable name
+            Log.d("AppNavigation", "[Challenge Start] Flow Collected: ${challengeData.gameId}") // <-- Updated Log Message
             // Determine opponent details based on current user ID
             val currentUserId = tokenManager.getUserId.firstOrNull() ?: ""
             val opponent =
-                if (gameData.player1.id == currentUserId) gameData.player2 else gameData.player1
+                if (challengeData.player1.id == currentUserId) challengeData.player2 else challengeData.player1
 
-            val route = Routes.createGameRoute(
-                gameId = gameData.gameId,
-                puzzle = gameData.puzzle,
+            val route = Routes.createGameRoute( // Use correct helper
+                gameId = challengeData.gameId,
                 opponentName = opponent.name,
-                opponentId = opponent.id,
-                timeLimitSeconds = gameData.timeLimitSeconds
+                opponentId = opponent.id
             )
-            Log.d("AppNavigation", "Navigating to Game: $route")
+            Log.d("AppNavigation", "[Challenge Start] Navigating to Game: $route") // <-- Updated Log Message
             navController.navigate(route) {
-                // Optional: Pop up to home or clear back stack if needed
-                // popUpTo(Routes.HOME)
+                // Optional: Pop up logic
             }
         }
     }
+
 
     // Render NavHost only after startDestination is determined
     if (startDestination != null) {
@@ -318,40 +227,43 @@ fun AppNavigation() {
 
 
             composable(
+                // *** PROBLEM AREA 3: Route definition in NavHost ***
+                // Use the corrected Routes.GAME constant
                 route = Routes.GAME,
                 arguments = listOf(
                     navArgument("gameId") { type = NavType.StringType },
-                    navArgument("puzzle") { type = NavType.StringType }, // Encoded
+                    // *** Remove arguments no longer in the route constant ***
+                    // navArgument("puzzle") { type = NavType.StringType },
                     navArgument("opponentName") { type = NavType.StringType }, // Encoded
                     navArgument("opponentId") { type = NavType.StringType },
-                    navArgument("timeLimitSeconds") { type = NavType.IntType }
+                    // navArgument("timeLimitSeconds") { type = NavType.IntType }
                 )
             ) { backStackEntry ->
                 // Decode arguments safely
                 val gameId = backStackEntry.arguments?.getString("gameId") ?: "error_id"
-                val puzzleEncoded = backStackEntry.arguments?.getString("puzzle") ?: "error_puzzle"
+//                val puzzleEncoded = backStackEntry.arguments?.getString("puzzle") ?: "error_puzzle"
                 val opponentNameEncoded =
                     backStackEntry.arguments?.getString("opponentName") ?: "Opponent"
                 val opponentId =
                     backStackEntry.arguments?.getString("opponentId") ?: "error_opponent_id"
                 // Default time limit (make sure GAME_TIME_LIMIT_SECONDS is accessible here or pass default)
-                val defaultTimeLimit = 60
-                val timeLimit =
-                    backStackEntry.arguments?.getInt("timeLimitSeconds") ?: defaultTimeLimit
+//                val defaultTimeLimit = 60
+//                val timeLimit = backStackEntry.arguments?.getInt("timeLimitSeconds") ?: defaultTimeLimit
 
                 // Handle potential decoding errors
-                val puzzle = try {
-                    URLDecoder.decode(puzzleEncoded, StandardCharsets.UTF_8.toString())
-                } catch (e: Exception) {
-                    Log.e("AppNavigation", "Puzzle decode error", e); "error"
-                }
+//                val puzzle = try {
+//                    URLDecoder.decode(puzzleEncoded, StandardCharsets.UTF_8.toString())
+//                } catch (e: Exception) {
+//                    Log.e("AppNavigation", "Puzzle decode error", e); "error"
+//                }
                 val opponentName = try {
-                    URLDecoder.decode(opponentNameEncoded, StandardCharsets.UTF_8.toString())
+//                    URLDecoder.decode(opponentNameEncoded, StandardCharsets.UTF_8.toString())
+                    Routes.decode(opponentNameEncoded)
                 } catch (e: Exception) {
                     Log.e("AppNavigation", "Opponent Name decode error", e); "Opponent"
                 }
 
-                if (gameId == "error_id" || puzzle == "error" || opponentId == "error_opponent_id") {
+                if (gameId == "error_id" || opponentId == "error_opponent_id") {
                     Log.e(
                         "AppNavigation",
                         "Error receiving game arguments. Cannot navigate to GameScreen."
@@ -365,14 +277,12 @@ fun AppNavigation() {
                         "Rendering GameScreen for gameId: $gameId, Opponent: $opponentName"
                     )
                     // *** CORRECTED: Pass all arguments to GameScreen ***
+                    // Pass only the necessary arguments
                     GameScreen(
                         navController = navController,
                         gameId = gameId,
-                        initialPuzzle = puzzle,
                         opponentName = opponentName,
-                        opponentId = opponentId,
-                        timeLimitSeconds = timeLimit
-                        // ViewModel is instantiated inside GameScreen using the factory
+                        opponentId = opponentId
                     )
                 }
             }

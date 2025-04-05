@@ -1,364 +1,194 @@
 package com.example.hectoclash.ui.theme.screens
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.foundation.Image
+
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.foundation.lazy.itemsIndexed // Ensure this import is present
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
+// import androidx.compose.ui.tooling.preview.Preview // Remove or update preview if needed
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.hectoclash.R
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.hectoclash.data.models.LeaderboardEntry // Import correct model
+import com.example.hectoclash.viewmodels.LeaderboardUiState
+import com.example.hectoclash.viewmodels.LeaderboardViewModel
+import java.util.Locale
 
-enum class LeaderboardType {
-    GLOBAL, COUNTRY, COLLEGE
-}
-
-data class LeaderboardEntry(
-    val rank: Int,
-    val playerId: String,
-    val profilePicRes: Int,
-    val matches: Int,
-    val won: Int,
-    val loss: Int,
-    val points: Int
-)
-
-@OptIn(ExperimentalMaterial3Api::class)
+// LeaderboardScreen Composable remains the same as provided previously
 @Composable
-fun LeaderboardScreen() {
-    // State for dropdown
-    var expanded by remember { mutableStateOf(false) }
-    var selectedLeaderboardType by remember { mutableStateOf(LeaderboardType.GLOBAL) }
+fun LeaderboardScreen(
+    modifier: Modifier = Modifier,
+    viewModel: LeaderboardViewModel = viewModel() // Get ViewModel instance
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle() // Collect state
 
-    // Current user and time
-    val currentUser = "MonuGit9"
-
-    // Dummy data for user's stats
-    val globalRank = 1
-    val countryRank = 1
-    val collegeRank = 1
-
-    // Dummy data for leaderboard
-    val dummyEntries = listOf(
-        LeaderboardEntry(1, "Pro_Player1", R.drawable.default_profile, 120, 85, 35, 2500),
-        LeaderboardEntry(2, "GameMaster", R.drawable.default_profile, 110, 75, 35, 2350),
-        LeaderboardEntry(3, "ChampionGirl", R.drawable.default_profile, 95, 68, 27, 2100),
-        LeaderboardEntry(4, "WinnerX", R.drawable.default_profile, 105, 65, 40, 1950),
-        LeaderboardEntry(5, "TopPlayer", R.drawable.default_profile, 90, 60, 30, 1800),
-        LeaderboardEntry(6, "GamerKid", R.drawable.default_profile, 80, 52, 28, 1650),
-        LeaderboardEntry(7, "MonuGit9", R.drawable.default_profile, 75, 48, 27, 1500),
-        LeaderboardEntry(8, "LeaderPro", R.drawable.default_profile, 70, 42, 28, 1350),
-        LeaderboardEntry(9, "StarGamer", R.drawable.default_profile, 65, 38, 27, 1200),
-        LeaderboardEntry(10, "ProGamer123", R.drawable.default_profile, 60, 35, 25, 1050),
-    )
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 8.dp, vertical = 16.dp) // Adjusted padding
     ) {
-        Column(
+        // Title
+        Text(
+            text = "HectoClash Leaderboard", // Updated Title
+            style = MaterialTheme.typography.headlineMedium, // Slightly larger
+            fontWeight = FontWeight.Bold,
             modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-        ) {
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            textAlign = TextAlign.Center // Center the title
+        )
 
-            // Global, Country and College Rank all in one row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 20.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Global Rank
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "GLOBAL",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Image(
-                        painter = painterResource(id = R.drawable.global),
-                        contentDescription = "Global Badge",
-                        modifier = Modifier.size(48.dp)
-                    )
-                    Text(
-                        text = "#$globalRank",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                // Country Rank
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "COUNTRY",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Image(
-                        painter = painterResource(id = R.drawable.country),
-                        contentDescription = "Country Badge",
-                        modifier = Modifier.size(48.dp)
-                    )
-                    Text(
-                        text = "#$countryRank",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                // College Rank
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "COLLEGE",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Image(
-                        painter = painterResource(id = R.drawable.college),
-                        contentDescription = "College Badge",
-                        modifier = Modifier.size(48.dp)
-                    )
-                    Text(
-                        text = "#$collegeRank",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+        // Content based on UI State
+        when (val state = uiState) {
+            is LeaderboardUiState.Loading -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
                 }
             }
-
-            // Dropdown for leaderboard selection with arrow indicator
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp)
-            ) {
-                OutlinedButton(
-                    onClick = { expanded = true },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = when (selectedLeaderboardType) {
-                                LeaderboardType.GLOBAL -> "Global Leaderboard"
-                                LeaderboardType.COUNTRY -> "Country Leaderboard"
-                                LeaderboardType.COLLEGE -> "College Leaderboard"
-                            },
-                            fontSize = 16.sp
-                        )
-                        Icon(
-                            imageVector = Icons.Default.ArrowDropDown,
-                            contentDescription = "Dropdown Arrow"
-                        )
+            is LeaderboardUiState.Success -> {
+                if (state.leaderboard.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("Leaderboard is empty.")
                     }
-                }
-
-                DropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false },
-                    modifier = Modifier
-                        .fillMaxWidth(0.9f)
-                        .background(MaterialTheme.colorScheme.surface)
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Global Leaderboard") },
-                        onClick = {
-                            selectedLeaderboardType = LeaderboardType.GLOBAL
-                            expanded = false
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Country Leaderboard") },
-                        onClick = {
-                            selectedLeaderboardType = LeaderboardType.COUNTRY
-                            expanded = false
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("College Leaderboard") },
-                        onClick = {
-                            selectedLeaderboardType = LeaderboardType.COLLEGE
-                            expanded = false
-                        }
-                    )
+                } else {
+                    LeaderboardList(entries = state.leaderboard) // Pass data here
                 }
             }
-
-            // Table Headers
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.primaryContainer)
-                    .padding(vertical = 12.dp, horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Rank",
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.width(45.dp),
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    text = "Player ID",
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f),
-                    textAlign = TextAlign.Left
-                )
-                Text(
-                    text = "Matches",
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.width(60.dp),
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    text = "Won",
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.width(45.dp),
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    text = "Loss",
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.width(45.dp),
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    text = "Points",
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.width(55.dp),
-                    textAlign = TextAlign.Center
-                )
-            }
-
-            // Leaderboard list
-            LazyColumn {
-                items(dummyEntries.sortedByDescending { it.points }) { entry ->
-                    LeaderboardRow(entry = entry, currentUser = currentUser)
-                    Divider(color = Color.LightGray, thickness = 0.5.dp)
+            is LeaderboardUiState.Error -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Error loading leaderboard", color = MaterialTheme.colorScheme.error)
+                        Text(state.message, fontSize = 12.sp, color = Color.Gray)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(onClick = { viewModel.fetchHectoChallengeLeaderboard() }) { // Retry button
+                            Text("Retry")
+                        }
+                    }
                 }
             }
         }
     }
 }
 
+
+// CORRECTED LeaderboardList function
 @Composable
-fun LeaderboardRow(entry: LeaderboardEntry, currentUser: String) {
+fun LeaderboardList(entries: List<LeaderboardEntry>) {
+    Card( // Wrap in a Card for visual structure like the image
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant)) { // Match dark header bg
+            // Header Row
+            LeaderboardHeader() // Header remains the same
+
+            // Leaderboard Entries List
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surface) // Lighter background for items
+            ) {
+                // *** Use entry.userId as the key ***
+                itemsIndexed(entries, key = { _, entry -> entry.userId }) { index, entry ->
+                    LeaderboardItem(rank = index + 1, entry = entry) // Item Composable remains the same
+                    if (index < entries.lastIndex) { // Don't add divider after last item
+                        Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                    }
+                }
+            }
+        }
+    }
+}
+
+// LeaderboardHeader Composable remains the same as provided previously
+@Composable
+fun LeaderboardHeader() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp, horizontal = 8.dp)
-            .background(
-                if (entry.playerId == currentUser)
-                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                else
-                    Color.Transparent
-            ),
+            .padding(horizontal = 12.dp, vertical = 10.dp), // Adjusted padding slightly
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Rank
+        Text("Rank", Modifier.width(50.dp), fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Player", Modifier.weight(1f), fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) // Changed to Player (ID)
+        Text("Played", Modifier.width(55.dp), fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("W", Modifier.width(35.dp), fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, fontSize = 13.sp, color = Color(0xFF4CAF50)) // Abbreviated
+        Text("L", Modifier.width(35.dp), fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, fontSize = 13.sp, color = Color(0xFFF44336)) // Abbreviated
+        Text("D", Modifier.width(35.dp), fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, fontSize = 13.sp, color = Color.Gray) // Draw
+        Text("Acc.", Modifier.width(50.dp), fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) // Accuracy
+    }
+}
+
+
+// LeaderboardItem Composable remains the same as provided previously
+@Composable
+fun LeaderboardItem(rank: Int, entry: LeaderboardEntry) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            // Adjust padding to match header horizontal padding
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Text(
-            text = "#${entry.rank}",
-            modifier = Modifier.width(45.dp),
+            text = "#$rank",
+            modifier = Modifier.width(50.dp),
             textAlign = TextAlign.Center,
-            fontWeight = if (entry.rank <= 3) FontWeight.Bold else FontWeight.Normal,
-            color = when (entry.rank) {
-                1 -> Color(0xFFFFD700) // Gold
-                2 -> Color(0xFFC0C0C0) // Silver
-                3 -> Color(0xFFCD7F32) // Bronze
-                else -> MaterialTheme.colorScheme.onSurface
-            }
+            fontWeight = FontWeight.Bold, // Make rank bold
+            fontSize = 15.sp,
+            color = MaterialTheme.colorScheme.primary // Use primary color for rank
+        )
+        Text(
+            text = entry.playerId, // Show PlayerID
+            modifier = Modifier.weight(1f).padding(end=4.dp), // Give padding before next item
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium
+        )
+        Text(
+            text = entry.totalChallengesPlayed.toString(), // Matches column
+            modifier = Modifier.width(55.dp), // Match header width
+            textAlign = TextAlign.Center,
+            fontSize = 14.sp, // Consistent font size
+            color = LocalContentColor.current.copy(alpha=0.8f)
+        )
+        Text(
+            text = entry.wins.toString(), // Won column
+            modifier = Modifier.width(35.dp), // Match header width
+            textAlign = TextAlign.Center,
+            fontSize = 14.sp,
+            color = Color(0xFF4CAF50) // Green
+        )
+        Text(
+            text = entry.losses.toString(), // Loss column
+            modifier = Modifier.width(35.dp), // Match header width
+            textAlign = TextAlign.Center,
+            fontSize = 14.sp,
+            color = Color(0xFFF44336) // Red
+        )
+        Text(
+            text = entry.draws.toString(), // Draws
+            modifier = Modifier.width(35.dp), // Match header width
+            textAlign = TextAlign.Center,
+            fontSize = 14.sp,
+            color = Color.Gray
         )
 
-        // Player ID with profile pic
-        Row(
-            modifier = Modifier.weight(1f),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Image(
-                painter = painterResource(id = entry.profilePicRes),
-                contentDescription = "Profile Picture",
-                modifier = Modifier
-                    .size(35.dp)
-                    .clip(CircleShape)
-                    .border(1.dp, Color.Gray, CircleShape),
-                contentScale = ContentScale.Crop
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = entry.playerId,
-                fontWeight = if (entry.playerId == currentUser) FontWeight.Bold else FontWeight.Normal,
-                color = if (entry.playerId == currentUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-
-        // Matches
         Text(
-            text = "${entry.matches}",
-            modifier = Modifier.width(60.dp),
-            textAlign = TextAlign.Center
-        )
-
-        // Won
-        Text(
-            text = "${entry.won}",
-            modifier = Modifier.width(45.dp),
+            // Format accuracy percentage
+            text = entry.accuracy?.let { String.format(Locale.US, "%.1f%%", it) } ?: "-",
+            modifier = Modifier.width(50.dp), // Match header width
             textAlign = TextAlign.Center,
-            color = Color(0xFF4CAF50)  // Green color for wins
-        )
-
-        // Loss
-        Text(
-            text = "${entry.loss}",
-            modifier = Modifier.width(45.dp),
-            textAlign = TextAlign.Center,
-            color = Color(0xFFF44336)  // Red color for losses
-        )
-
-        // Points
-        Text(
-            text = "${entry.points}",
-            modifier = Modifier.width(55.dp),
-            textAlign = TextAlign.Center,
-            fontWeight = FontWeight.Bold
+            fontSize = 14.sp,
+            color = LocalContentColor.current.copy(alpha = 0.8f)
         )
     }
 }
