@@ -1,6 +1,7 @@
 package com.example.hectoclash.data.network
 
 import com.example.hectoclash.data.models.AuthResponse
+import com.example.hectoclash.data.models.LeaderboardEntry
 import com.example.hectoclash.data.models.FriendListItem
 import com.example.hectoclash.data.models.OnlineUserResponse
 import com.example.hectoclash.data.models.SignInRequest
@@ -12,6 +13,7 @@ import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.Query
 import retrofit2.http.Path
 
 interface ApiService {
@@ -51,6 +53,19 @@ interface ApiService {
     // Gets a SPECIFIC user's public profile + friendship status relative to logged-in user
     @GET("api/friends/{userId}/profile")
     suspend fun getUserProfile(@Path("userId") userId: String): Response<UserProfileResponse> // New model needed
+
+//    // *** ADD THIS ENDPOINT FOR LEADERBOARD ***
+//    @GET("api/leaderboard/global") // Matches your backend route
+//    suspend fun getGlobalLeaderboard(
+//        @Query("limit") limit: Int? = 50 // Optional limit query parameter
+//    ): Response<List<LeaderboardEntry>> // Returns a list of LeaderboardEntry
+
+    // *** UPDATE THIS ENDPOINT FOR THE NEW LEADERBOARD ***
+    @GET("api/leaderboard/hectoc-challenge") // Matches your new backend route
+    suspend fun getHectocChallengeLeaderboard(
+        @Query("limit") limit: Int? = 50 // Optional limit query parameter
+    ): Response<List<LeaderboardEntry>> // Returns the updated LeaderboardEntry list
+
 }
 
 // Add GenericResponse if needed for simple messages
