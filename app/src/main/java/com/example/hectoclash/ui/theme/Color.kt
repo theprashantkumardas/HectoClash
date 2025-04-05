@@ -16,3 +16,16 @@ val OfflineIndicator = Color(0xFF9E9E9E)
 val Purple80 = Color(0xFFD0BCFF)
 val PurpleGrey80 = Color(0xFFCCC2DC)
 val Pink80 = Color(0xFFEFB8C8)
+
+// Define core palette colors
+val GreenAccent = Color(0xFF00E676) // Bright Green
+val DarkBackgroundStart = Color(0xFF1F1F1F) // Slightly lighter dark grey
+val DarkBackgroundEnd = Color(0xFF121212)   // Near Black
+val DarkSurface = Color(0xFF2C2C2C)       // Dark Grey for cards/surfaces
+val TextOnDark = Color.White
+val TextOnDarkSecondary = Color.Gray
+val PurpleFriend = Color(0xFF6A1B9A)
+val ProfilePink = Color(0xFFE91E63) // Example pink for profile
+
+// You can create full light/dark ColorSchemes using these if needed
+// in Theme.kt, or just use these colors directly for specific elements.
