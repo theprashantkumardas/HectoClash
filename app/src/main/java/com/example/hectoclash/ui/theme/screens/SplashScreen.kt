@@ -1,0 +1,115 @@
+// src/main/java/com/example/hectoclash/ui/theme/screens/SplashScreen.kt
+package com.example.hectoclash.ui.theme.screens
+
+import android.util.Log
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding // Import padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text // Import Text
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale // Import ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp // Import dp unit
+import androidx.navigation.NavHostController
+import com.airbnb.lottie.compose.*
+import com.example.hectoclash.R // Import your R class
+import com.example.hectoclash.data.local.TokenManager
+import com.example.hectoclash.navigation.Routes
+import com.example.hectoclash.utils.SocketManager
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.firstOrNull
+
+// Define a minimum splash display time (e.g., 3 seconds)
+private const val SPLASH_MIN_DURATION_MS = 1000L
+
+@Composable
+fun SplashScreen(navController: NavHostController) {
+    val context = LocalContext.current
+    val tokenManager = remember { TokenManager.getInstance(context) }
+    var targetRoute by remember { mutableStateOf<String?>(null) }
+
+    // --- Lottie Animation Setup ---
+    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.splash_animation))
+    val progress by animateLottieCompositionAsState(
+        composition = composition,
+        iterations = LottieConstants.IterateForever
+    )
+
+    // --- Logic to determine next screen and handle delay (Unchanged) ---
+    LaunchedEffect(key1 = Unit) {
+        val startTime = System.currentTimeMillis()
+
+        // 1. Check login state
+        val token = tokenManager.getToken.firstOrNull()
+        val destination = if (!token.isNullOrEmpty()) {
+            val userId = tokenManager.getUserId.firstOrNull()
+            if (!userId.isNullOrEmpty()) {
+                SocketManager.connect(userId)
+                Log.d("SplashScreen", "User logged in ($userId), connecting socket.")
+            } else {
+                Log.w("SplashScreen", "User logged in but userId is null/empty.")
+            }
+            Routes.HOME
+        } else {
+            Log.d("SplashScreen", "User not logged in.")
+            Routes.SIGN_IN
+        }
+        Log.d("SplashScreen", "Target destination determined: $destination")
+
+        // 2. Ensure minimum splash duration
+        val elapsedTime = System.currentTimeMillis() - startTime
+        val remainingTime = SPLASH_MIN_DURATION_MS - elapsedTime
+        if (remainingTime > 0) {
+            Log.d("SplashScreen", "Waiting for remaining splash duration: ${remainingTime}ms")
+            delay(remainingTime)
+        }
+
+        // 3. Set the target route to trigger navigation
+        targetRoute = destination
+        Log.d("SplashScreen", "Splash finished, ready to navigate.")
+    }
+
+    // --- Navigation (Unchanged) ---
+    LaunchedEffect(key1 = targetRoute) {
+        targetRoute?.let { route ->
+            Log.d("SplashScreen", "Navigating to $route")
+            navController.navigate(route) {
+                popUpTo(Routes.SPLASH) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+    }
+
+    // --- UI ---
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+        // No need for contentAlignment here if children use align
+    ) {
+        // Lottie Animation - Fills the entire Box
+        LottieAnimation(
+            composition = composition,
+            progress = { progress },
+            modifier = Modifier.fillMaxSize(), // Make animation fill the Box
+            contentScale = ContentScale.Crop // Crop if aspect ratio doesn't match
+            // You could also try ContentScale.Fit if you want the whole animation visible,
+            // but it might leave empty space (letterboxing/pillarboxing)
+            // Or ContentScale.FillBounds if you don't mind stretching/squashing
+        )
+
+        // Text - Aligned to the bottom center of the Box
+        Text(
+            text = "HectoClash",
+            style = MaterialTheme.typography.headlineMedium, // Adjust style as needed
+            color = MaterialTheme.colorScheme.onBackground, // Ensure good contrast
+            modifier = Modifier
+                .align(Alignment.BottomCenter) // Align within the Box
+                .padding(bottom = 64.dp) // Add padding from the screen bottom
+        )
+    }
+}

@@ -1,3 +1,4 @@
+// src/main/java/com/example/hectoclash/viewmodels/GameViewModel.kt
 package com.example.hectoclash.viewmodels
 
 import android.app.Application
@@ -17,6 +18,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+// Define the segment types
+sealed interface PuzzleSegment {
+    val char: Char
+    data class Digit(override val char: Char) : PuzzleSegment
+    data class Operator(override val char: Char) : PuzzleSegment
+}
+
 class GameViewModel(
     application: Application,
     savedStateHandle: SavedStateHandle // For receiving navigation arguments
@@ -32,30 +40,43 @@ class GameViewModel(
     val timeLimitSeconds: Int = savedStateHandle["timeLimitSeconds"] ?: 60
 
     // --- Game State ---
-    private val _puzzle = MutableStateFlow(initialPuzzle)
-    val puzzle: StateFlow<String> = _puzzle.asStateFlow()
+    // Puzzle represented as segments
+    private val _puzzleSegments = MutableStateFlow<List<PuzzleSegment>>(emptyList())
+    val puzzleSegments: StateFlow<List<PuzzleSegment>> = _puzzleSegments.asStateFlow()
+
+    // Cursor position (index *between* segments)
+    // 0 = before first segment, segments.size = after last segment
+    private val _cursorPosition = MutableStateFlow(initialPuzzle.length) // Start cursor at the end
+    val cursorPosition: StateFlow<Int> = _cursorPosition.asStateFlow()
 
     private val _timeLeft = MutableStateFlow(timeLimitSeconds * 1000L) // Time left in milliseconds
     val timeLeft: StateFlow<Long> = _timeLeft.asStateFlow()
 
-    private val _solutionInput = MutableStateFlow("")
-    val solutionInput: StateFlow<String> = _solutionInput.asStateFlow()
-
+    // Flag for submission state
     private val _isSubmitting = MutableStateFlow(false)
     val isSubmitting: StateFlow<Boolean> = _isSubmitting.asStateFlow()
 
+    // Game result data
     private val _gameResult = MutableStateFlow<GameOverData?>(null)
     val gameResult: StateFlow<GameOverData?> = _gameResult.asStateFlow()
 
-    private val _feedbackMessage = MutableStateFlow<String?>(null) // For "Invalid solution" etc.
+    // Feedback messages
+    private val _feedbackMessage = MutableStateFlow<String?>(null)
     val feedbackMessage: StateFlow<String?> = _feedbackMessage.asStateFlow()
 
     private var countdownTimer: CountDownTimer? = null
     private var socketListenerJob: Job? = null
     private var currentUserId: String? = null
 
+    // Allowed operators for insertion
+    private val allowedOperators = setOf('+', '-', '*', '/', '(', ')', '^')
+
     init {
         Log.d("GameViewModel", "Initializing for game: $gameId")
+        // Initialize segments from the initial puzzle string
+        _puzzleSegments.value = initialPuzzle.map { PuzzleSegment.Digit(it) }
+        _cursorPosition.value = _puzzleSegments.value.size // Cursor initially after last digit
+
         viewModelScope.launch {
             currentUserId = tokenManager.getUserId.firstOrNull()
         }
@@ -63,20 +84,79 @@ class GameViewModel(
         listenToSocketEvents()
     }
 
-    fun onSolutionInputChange(newValue: String) {
-        _solutionInput.value = newValue
+    // --- Input Handling ---
+
+    fun setCursorPosition(index: Int) {
+        // Ensure cursor stays within valid bounds (0 to segments.size)
+        _cursorPosition.value = index.coerceIn(0, _puzzleSegments.value.size)
+        Log.d("GameViewModel", "Cursor position set to: ${_cursorPosition.value}")
     }
 
-    fun submitSolution() {
-        if (_solutionInput.value.isBlank() || _isSubmitting.value || _gameResult.value != null) {
-            return // Don't submit if empty, already submitting, or game is over
+    fun insertOperator(operatorChar: Char) {
+        if (!allowedOperators.contains(operatorChar) || gameResult.value != null) return
+
+        val currentSegments = _puzzleSegments.value.toMutableList()
+        val insertIndex = _cursorPosition.value
+
+        // Basic validation (can be more sophisticated): Prevent double operators unless parentheses
+        val prevSegment = currentSegments.getOrNull(insertIndex - 1)
+        val nextSegment = currentSegments.getOrNull(insertIndex)
+
+        val canInsert = when {
+            // Allow opening parenthesis anywhere except maybe after an operator without a digit first? (Needs rule check)
+            operatorChar == '(' -> true
+            // Allow closing parenthesis if there's a matching open one and not immediately after an operator?
+            operatorChar == ')' -> true // Needs better validation for balance
+            // Don't insert operator if previous is already an operator (except opening parenthesis?)
+            prevSegment is PuzzleSegment.Operator && prevSegment.char != '(' -> false
+            // Don't insert operator if next is already an operator (except closing parenthesis?)
+            nextSegment is PuzzleSegment.Operator && nextSegment.char != ')'-> false
+            else -> true
         }
+
+        if (canInsert) {
+            currentSegments.add(insertIndex, PuzzleSegment.Operator(operatorChar))
+            _puzzleSegments.value = currentSegments
+            _cursorPosition.value = insertIndex + 1 // Move cursor after inserted operator
+            Log.d("GameViewModel", "Inserted '$operatorChar' at $insertIndex. New segments: ${_puzzleSegments.value}")
+        } else {
+            Log.d("GameViewModel", "Insertion of '$operatorChar' at $insertIndex prevented by validation.")
+            // Optionally provide feedback via _feedbackMessage
+        }
+
+    }
+
+    fun handleBackspace() {
+        if (_cursorPosition.value == 0 || gameResult.value != null) return
+
+        val currentSegments = _puzzleSegments.value.toMutableList()
+        val removalIndex = _cursorPosition.value - 1
+
+        // Only remove if the segment *before* the cursor is an Operator
+        if (currentSegments.getOrNull(removalIndex) is PuzzleSegment.Operator) {
+            currentSegments.removeAt(removalIndex)
+            _puzzleSegments.value = currentSegments
+            _cursorPosition.value = removalIndex // Move cursor to where the operator was
+            Log.d("GameViewModel", "Removed operator at $removalIndex. New segments: ${_puzzleSegments.value}")
+        } else {
+            Log.d("GameViewModel", "Backspace ignored: segment at $removalIndex is not an operator.")
+        }
+    }
+
+    // --- Submission ---
+    fun submitSolution() {
+        val solutionString = _puzzleSegments.value.joinToString("") { it.char.toString() }
+        if (solutionString == initialPuzzle || _isSubmitting.value || _gameResult.value != null) {
+            Log.d("GameViewModel", "Submission skipped: No operators added, submitting, or game over.")
+            return // Don't submit if same as initial, already submitting, or game is over
+        }
+
         viewModelScope.launch {
             _isSubmitting.value = true
             _feedbackMessage.value = null // Clear previous feedback
-            Log.d("GameViewModel", "Submitting solution: ${_solutionInput.value}")
-            SocketManager.emitSubmitSolution(gameId, _solutionInput.value)
-            // Timeout for submission feedback (in case server doesn't respond quickly)
+            Log.d("GameViewModel", "Submitting solution: $solutionString")
+            SocketManager.emitSubmitSolution(gameId, solutionString)
+            // Timeout logic remains the same
             delay(5000) // 5 seconds
             if (_isSubmitting.value && _gameResult.value == null) {
                 _isSubmitting.value = false
@@ -85,7 +165,10 @@ class GameViewModel(
         }
     }
 
+
+    // --- Timer and Socket Listeners (Mostly Unchanged) ---
     private fun startTimer() {
+        // ... (timer logic is the same) ...
         countdownTimer?.cancel() // Cancel any existing timer
         countdownTimer = object : CountDownTimer(_timeLeft.value, 1000) { // Tick every second
             override fun onTick(millisUntilFinished: Long) {
@@ -94,15 +177,14 @@ class GameViewModel(
 
             override fun onFinish() {
                 _timeLeft.value = 0
-                // Timer finished locally. The server determines the actual timeout result.
                 Log.d("GameViewModel", "Local timer finished for game $gameId")
-                // Optionally disable input field here if game hasn't ended via socket yet
             }
         }.start()
         Log.d("GameViewModel", "Timer started for $timeLimitSeconds seconds")
     }
 
     private fun listenToSocketEvents() {
+        // ... (socket listening logic is the same) ...
         if (socketListenerJob?.isActive == true) return
         Log.d("GameViewModel", "Starting to listen to game-specific socket events")
 
@@ -110,26 +192,26 @@ class GameViewModel(
             // Listen for Game Over
             launch {
                 SocketManager.gameOverFlow
-                    .filter { it.gameId == gameId } // Only process events for *this* game
+                    .filter { it.gameId == gameId }
                     .catch { e -> Log.e("GameViewModel", "Error in gameOverFlow: ${e.message}") }
                     .collect { result ->
                         Log.i("GameViewModel", "Game Over received for game $gameId: ${result.reason}")
-                        countdownTimer?.cancel() // Stop local timer
+                        countdownTimer?.cancel()
                         _isSubmitting.value = false
-                        _gameResult.value = result // Update UI to show results
+                        _gameResult.value = result
                     }
             }
 
             // Listen for Invalid Solution Feedback
             launch {
                 SocketManager.solutionInvalidFlow
-                    .filter { it.gameId == gameId } // Only process events for *this* game
+                    .filter { it.gameId == gameId }
                     .catch { e -> Log.e("GameViewModel", "Error in solutionInvalidFlow: ${e.message}") }
                     .collect { invalidInfo ->
                         Log.w("GameViewModel", "Invalid solution received: ${invalidInfo.reason}")
-                        _isSubmitting.value = false // Re-enable submit button
+                        _isSubmitting.value = false
                         _feedbackMessage.value = formatInvalidReason(invalidInfo)
-                        // Optionally clear feedback after a delay
+                        // Optional feedback clear delay
                         launch {
                             delay(3000)
                             if (_feedbackMessage.value == formatInvalidReason(invalidInfo)) {
@@ -141,10 +223,12 @@ class GameViewModel(
         }
     }
 
+    // --- Result Formatting (Mostly Unchanged) ---
     private fun formatInvalidReason(info: SolutionInvalidData): String {
+        // ... (same as before) ...
         return when (info.reason) {
             "digit_mismatch" -> "Incorrect digits or order used."
-            "wrong_result" -> "Calculation does not equal 100."
+            "wrong_result" -> "Calculation does not equal 100." // Or target number
             "evaluation_error" -> "Invalid mathematical expression."
             "game_already_over" -> "Game has already ended."
             "already_submitted" -> "You already submitted a solution."
@@ -153,6 +237,7 @@ class GameViewModel(
     }
 
     fun getGameOutcomeMessage(): String? {
+        // ... (same as before) ...
         val result = _gameResult.value ?: return null
         val isWinner = result.winnerId == currentUserId
         val isLoser = result.loserId == currentUserId
@@ -160,61 +245,44 @@ class GameViewModel(
         return when (result.status) {
             "completed_win" -> if (isWinner) "You Won!" else "You Lost!"
             "timeout" -> "Time's Up!"
-            "completed_draw" -> "It's a Draw!" // If you implement draws
-            "abandoned" -> if (isWinner) "Opponent Left!" else "Game Abandoned" // Should ideally only be seen by winner
+            "completed_draw" -> "It's a Draw!"
+            "abandoned" -> if (isWinner) "Opponent Left!" else "Game Abandoned"
             else -> "Game Over (${result.status})"
         }
     }
 
     fun getResultMessageDetails(): String? {
+        // ... (same as before, uses new player1Info/player2Info structure) ...
         val result = _gameResult.value ?: return null
-
-        // Find solutions using the new structure
-        val opponentSolutionInfo = if (result.player1Info?.id == opponentId) {
-            result.player1Info
-        } else if (result.player2Info?.id == opponentId) {
-            result.player2Info
-        } else {
-            null // Opponent info not found in payload? Log error maybe.
-        }
-
-        val yourSolutionInfo = if (result.player1Info?.id == currentUserId) {
-            result.player1Info
-        } else if (result.player2Info?.id == currentUserId) {
-            result.player2Info
-        } else {
-            null // Your info not found? Log error maybe.
-        }
-
+        val opponentSolutionInfo = if (result.player1Info?.id == opponentId) result.player1Info else result.player2Info
+        val yourSolutionInfo = if (result.player1Info?.id == currentUserId) result.player1Info else result.player2Info
         val opponentSolution = opponentSolutionInfo?.solution
         val yourSolution = yourSolutionInfo?.solution
-
-        // Prepare solution strings for display
         val yourSolutionText = "Your solution: ${yourSolution ?: "Not submitted"}"
-        // Use opponentName property from ViewModel
         val opponentSolutionText = "$opponentName's solution: ${opponentSolution ?: "Not submitted"}"
 
         return when (result.reason) {
             "correct_solution" -> {
                 val winnerName = if (result.winnerId == currentUserId) "You" else opponentName
-                "$winnerName found the solution first.\n$yourSolutionText\n$opponentSolutionText" // Append solutions
+                "$winnerName found the solution first.\n$yourSolutionText\n$opponentSolutionText"
             }
             "timeout" -> "Neither player found a solution in time.\n$yourSolutionText\n$opponentSolutionText"
-            "opponent_disconnected" -> "$opponentName disconnected." // Solutions might be less relevant here
-            else -> "Reason: ${result.reason}\n$yourSolutionText\n$opponentSolutionText" // Default case includes solutions
+            "opponent_disconnected" -> "$opponentName disconnected."
+            else -> "Reason: ${result.reason}\n$yourSolutionText\n$opponentSolutionText"
         }
     }
 
+
     override fun onCleared() {
+        // ... (same as before) ...
         super.onCleared()
         Log.d("GameViewModel", "ViewModel cleared for game $gameId. Cancelling timer and listeners.")
         countdownTimer?.cancel()
         socketListenerJob?.cancel()
-        // Do NOT disconnect SocketManager here
     }
 }
 
-// Add a ViewModel Factory if not using Hilt
+// --- ViewModel Factory (Unchanged) ---
 class GameViewModelFactory(
     private val application: Application,
     private val savedStateHandle: SavedStateHandle
