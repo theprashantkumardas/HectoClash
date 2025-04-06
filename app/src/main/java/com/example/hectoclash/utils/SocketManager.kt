@@ -13,11 +13,14 @@ import com.example.hectoclash.data.models.FriendRequestRejectedData
 import com.example.hectoclash.data.models.GameOverData
 import com.example.hectoclash.data.models.GameStartData
 import com.example.hectoclash.data.models.GameStartFailedData
+import com.example.hectoclash.data.models.LeftMatchmakingData
+import com.example.hectoclash.data.models.MatchmakingFailedData
 import com.example.hectoclash.data.models.NewRoundData
 import com.example.hectoclash.data.models.OnlineUserResponse
 import com.example.hectoclash.data.models.ReceiveChallengeData
 import com.example.hectoclash.data.models.RespondChallengeData
 import com.example.hectoclash.data.models.RoundOverData
+import com.example.hectoclash.data.models.SearchingForMatchData
 import com.example.hectoclash.data.models.SolutionInvalidData
 import com.example.hectoclash.data.models.SolutionResultData
 import com.example.hectoclash.data.models.SubmitSolutionData
@@ -106,6 +109,18 @@ object SocketManager {
     private val _challengeOverFlow = MutableSharedFlow<ChallengeOverData>(replay = 0)
     val challengeOverFlow = _challengeOverFlow.asSharedFlow()
     // --- END NEW Flows ---
+
+    // --- <<< NEW Matchmaking Flows >>> ---
+    private val _searchingForMatchFlow = MutableSharedFlow<SearchingForMatchData>(replay = 0)
+    val searchingForMatchFlow = _searchingForMatchFlow.asSharedFlow()
+
+    private val _leftMatchmakingFlow = MutableSharedFlow<LeftMatchmakingData>(replay = 0)
+    val leftMatchmakingFlow = _leftMatchmakingFlow.asSharedFlow()
+
+    private val _matchmakingFailedFlow = MutableSharedFlow<MatchmakingFailedData>(replay = 0)
+    val matchmakingFailedFlow = _matchmakingFailedFlow.asSharedFlow()
+    // --- <<< END NEW >>> ---
+
 
     fun initialize() {
         // Prevent re-initialization if socket already exists
@@ -302,6 +317,27 @@ object SocketManager {
         socket?.on("friend_removed") { args ->
             parseAndEmit(args, _friendRemovedFlow, FriendRemovedData::class.java, "friend_removed")
         }
+        // --- <<< NEW Matchmaking Listeners >>> ---
+        socket?.on("searching_for_match") { args ->
+            Log.d(TAG, "Received searching_for_match confirmation")
+            // Can parse if server sends data, or just emit a default object
+            // parseAndEmit(args, _searchingForMatchFlow, SearchingForMatchData::class.java, "searching_for_match")
+            CoroutineScope(Dispatchers.Main).launch { // Emit a default confirmation
+                _searchingForMatchFlow.emit(SearchingForMatchData())
+            }
+        }
+
+        socket?.on("left_matchmaking") { args ->
+            Log.d(TAG, "Received left_matchmaking confirmation")
+            CoroutineScope(Dispatchers.Main).launch {
+                _leftMatchmakingFlow.emit(LeftMatchmakingData())
+            }
+        }
+
+        socket?.on("matchmaking_failed") { args ->
+            parseAndEmit(args, _matchmakingFailedFlow, MatchmakingFailedData::class.java, "matchmaking_failed")
+        }
+        // --- <<< END NEW >>> ---
 
 
     }
@@ -371,6 +407,27 @@ object SocketManager {
             Log.w(TAG, "Cannot emit submit_solution: Socket not connected.")
         }
     }
+
+    // --- <<< NEW Matchmaking Emit Functions >>> ---
+    fun emitEnterMatchmaking() {
+        if (socket?.connected() == true) {
+            Log.d(TAG, "Emitting enter_matchmaking")
+            socket?.emit("enter_matchmaking")
+        } else {
+            Log.w(TAG, "Cannot emit enter_matchmaking: Socket not connected.")
+        }
+    }
+
+    fun emitLeaveMatchmaking() {
+        if (socket?.connected() == true) {
+            Log.d(TAG, "Emitting leave_matchmaking")
+            socket?.emit("leave_matchmaking")
+        } else {
+            Log.w(TAG, "Cannot emit leave_matchmaking: Socket not connected.")
+        }
+    }
+    // --- <<< END NEW >>> ---
+
 
     // --- Deprecated Callbacks (Keep if needed, but Flows are preferred) ---
     @Deprecated("Use onlineUsersFlow instead", ReplaceWith("onlineUsersFlow"))

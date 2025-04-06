@@ -127,6 +127,20 @@ data class ChallengeOverData(
     // data class RoundPlayerInfo(...)
 }
 
+// For receiving searching_for_match confirmation (can be simple)
+data class SearchingForMatchData( // Optional: could just be a status update
+    val status: String = "searching" // Or server could just send the event name
+)
+
+// For receiving left_matchmaking confirmation (can be simple)
+data class LeftMatchmakingData( // Optional
+    val status: String = "left_queue"
+)
+
+// For receiving matchmaking_failed event
+data class MatchmakingFailedData(
+    val reason: String // e.g., 'not_logged_in', 'already_in_game', 'opponent_left_queue'
+)
 
 // OLD: GameOverData - Can be removed or kept for reference
 /*

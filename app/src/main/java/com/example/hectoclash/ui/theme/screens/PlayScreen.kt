@@ -91,7 +91,7 @@ fun PlayScreen(
             },
             onMoreClick = {
                 // Navigate to the main Friends List tab/screen
-                mainNavController.navigate(Routes.HOME_FRIENDS_TAB) {
+                mainNavController.navigate(Routes.FRIENDS_LIST) {
                     launchSingleTop = true
                 }
             }

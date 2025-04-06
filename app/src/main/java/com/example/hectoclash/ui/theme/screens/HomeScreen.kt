@@ -7,6 +7,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -25,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -109,21 +112,25 @@ fun HomeScreen(mainNavController: NavHostController) { // Correct parameter type
             }
 
 
-//            BottomNavBar( // Call the component from BottomNavBar.kt
-//                // It defines its own items list internally now
-//                currentDestination = currentDestination,
-//                onItemClick = { route ->
-//                    nestedNavController.navigate(route) {
-//                        // Standard bottom nav popUp logic
-//                        popUpTo(nestedNavController.graph.findStartDestination().id) {
-//                            saveState = true
-//                        }
-//                        launchSingleTop = true
-//                        restoreState = true
-//                    }
-//                }
-//            )
+
+        },
+                // --- <<< NEW Floating Action Button >>> ---
+        floatingActionButtonPosition = FabPosition.Center,// Position above BottomNav
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                text = { Text("Play Now") },
+                icon = { Icon(Icons.Filled.SportsEsports, contentDescription = "Play Now") },
+                onClick = {
+                    // Navigate to the new Matchmaking screen using the *main* NavController
+                    mainNavController.navigate(Routes.MATCHMAKING)
+                },
+                modifier = Modifier.padding(bottom = 0.dp) // Adjust padding if needed so it doesn't overlap bottom nav too much
+            )
         }
+
+
+//
+
     ) { paddingValues ->
         Box(modifier = Modifier.padding(paddingValues)) {
             NavHost(
@@ -177,43 +184,3 @@ fun HomeScreen(mainNavController: NavHostController) { // Correct parameter type
     }
 }
 
-//// --- Define BottomNavItem structure including Friends ---
-//sealed class BottomNavItem(val route: String, val title: String, val icon: ImageVector) {
-//    object Play : BottomNavItem(Routes.HOME_PLAY_TAB, "Play", Icons.Default.SportsEsports) // Changed icon
-//    object Leaderboard : BottomNavItem(Routes.HOME_LEADERBOARD_TAB, "Leaderboard", Icons.Filled.EmojiEvents)
-//    // RENAME REWARDS to FRIENDS
-//    object Friends : BottomNavItem(Routes.FRIENDS_LIST, "Friends", Icons.Filled.People) // Use FRIENDS_LIST route
-//    object Profile : BottomNavItem(Routes.HOME_PROFILE_TAB, "Profile", Icons.Filled.Person)
-//}
-
-
-//// BottomNavBar using the nested controller and Screen.HomeNav routes
-//@Composable
-//fun HomeBottomNavBar(navController: NavHostController) {
-//    val items = listOf(
-//        Screen.HomeNav.Play,
-//        Screen.HomeNav.Leaderboard,
-//        Screen.HomeNav.Rewards,
-//        Screen.HomeNav.Profile
-//    )
-//    // You'll need icons and labels for these items
-//    val navBackStackEntry by navController.currentBackStackEntryAsState()
-//    val currentDestination = navBackStackEntry?.destination
-//
-//    NavigationBar { // Use Material3 NavigationBar
-//        items.forEach { screen ->
-//            NavigationBarItem(
-//                icon = { /* TODO: Provide an Icon based on screen */ Icon(Icons.Filled.Home, "Tab") },
-//                label = { Text(screen.route.substringAfter("home/").replaceFirstChar { it.uppercase() }) }, // Simple label from route
-//                selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
-//                onClick = {
-//                    navController.navigate(screen.route) {
-//                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-//                        launchSingleTop = true
-//                        restoreState = true
-//                    }
-//                }
-//            )
-//        }
-//    }
-//}

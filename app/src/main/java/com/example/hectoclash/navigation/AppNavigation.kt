@@ -27,6 +27,7 @@ import com.example.hectoclash.ui.theme.screens.FriendsListScreen
 //import com.example.hectoclash.ui.theme.screens.FriendsListScreen
 import com.example.hectoclash.ui.theme.screens.GameScreen
 import com.example.hectoclash.ui.theme.screens.HomeScreen
+import com.example.hectoclash.ui.theme.screens.MatchmakingScreen
 import com.example.hectoclash.ui.theme.screens.PlayOnlineScreen
 import com.example.hectoclash.ui.theme.screens.ProfileScreen
 import com.example.hectoclash.ui.theme.screens.SignInScreen
@@ -42,6 +43,7 @@ import java.nio.charset.StandardCharsets
 
 object Routes {
     // --- Top Level Routes ---
+    const val SPLASH = "splash"
     const val SIGN_IN = "sign_in"
     const val SIGN_UP = "sign_up"
     const val HOME = "home" // Root for screens with bottom nav
@@ -52,6 +54,10 @@ object Routes {
 
     const val GAME = "game/{gameId}/{opponentName}/{opponentId}"
 
+
+    // ... other routes ...
+    const val MATCHMAKING = "matchmaking" // <<< NEW Route
+    // ... other routes ..
 
 
     // --- Nested Routes for Home Bottom Navigation ---
@@ -224,6 +230,11 @@ fun AppNavigation() {
                     )
                 }
             }
+            // <<< NEW Composable for Matchmaking >>>
+            composable(Routes.MATCHMAKING) {
+                MatchmakingScreen(navController = navController)
+            }
+            // <<< END NEW >>>
 
 
             composable(
