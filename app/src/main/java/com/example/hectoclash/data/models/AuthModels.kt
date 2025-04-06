@@ -2,6 +2,23 @@ package com.example.hectoclash.data.models
 
 import com.google.gson.annotations.SerializedName
 
+
+data class User(
+    @SerializedName("_id") val id: String, // Match MongoDB's _id
+    val name: String,
+    val playerId: String,
+    val email: String,
+
+    // Stats fields matching your UserSchema and API response
+    val wins: Int = 0,
+    val losses: Int = 0,
+    val draws: Int = 0,
+    val totalGamesPlayed: Int = 0,
+    val points: Int = 1000, // Use default from schema
+    val rating: Int? = 1000, // Use default from schema, make nullable if it might not exist
+    val createdAt: String? = null // Store ISO date string from backend
+)
+
 // Request model for sign-in
 data class SignInRequest(
     val email: String,
@@ -28,12 +45,12 @@ data class AuthResponse(
 )
 
 // User model
-data class User(
-    val id: String,
-    val name: String,
-    val playerId: String,
-    val email: String
-)
+//data class User(
+//    val id: String,
+//    val name: String,
+//    val playerId: String,
+//    val email: String
+//)
 
 // Online User response model
 data class OnlineUserResponse(
@@ -42,24 +59,26 @@ data class OnlineUserResponse(
     val playerId: String
 )
 
+
+// Ensure this is a TOP-LEVEL class, not nested
+data class PlayerInfo(
+    val id: String,
+    val name: String
+)
+
+// ChallengeStartData uses the top-level PlayerInfo
 data class ChallengeStartData(
     val gameId: String,
     val totalRounds: Int,
     val roundTimeLimitSeconds: Int,
-    val overallTimeLimitSeconds: Int, // Optional, if server sends it
-    val player1: PlayerInfo,
-    val player2: PlayerInfo,
-    // Initial round data
-    val currentRound: Int, // Should be 1 initially
+    val overallTimeLimitSeconds: Int,
+    val player1: PlayerInfo, // Uses the top-level PlayerInfo
+    val player2: PlayerInfo, // Uses the top-level PlayerInfo
+    val currentRound: Int,
     val puzzle: String,
-    val player1Score: Int, // Should be 0 initially
-    val player2Score: Int  // Should be 0 initially
-) {
-    data class PlayerInfo(
-        val id: String,
-        val name: String
-    )
-}
+    val player1Score: Int,
+    val player2Score: Int
+)
 
 // NEW: Data for starting subsequent rounds
 data class NewRoundData(

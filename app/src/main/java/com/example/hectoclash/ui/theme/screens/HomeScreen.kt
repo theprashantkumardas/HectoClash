@@ -1,6 +1,8 @@
 package com.example.hectoclash.ui.theme.screens
 
 import android.app.Application
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -44,6 +46,7 @@ import com.example.hectoclash.utils.SocketManager
 import com.example.hectoclash.viewmodels.ProfileViewModelFactory
 import kotlinx.coroutines.launch
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 
 @Composable
@@ -146,13 +149,13 @@ fun HomeScreen(mainNavController: NavHostController) { // Correct parameter type
                 
                 composable(BottomNavItem.Profile.route) {
                     ProfileScreen(
-                        onLogout = {
-                            SocketManager.disconnect()
-                            // Use mainNavController to navigate outside HOME scope
-                            mainNavController.navigate(Routes.SIGN_IN) {
-                                popUpTo(Routes.HOME) { inclusive = true }
-                            }
-                        },
+//                        onLogout = {
+//                            SocketManager.disconnect()
+//                            // Use mainNavController to navigate outside HOME scope
+//                            mainNavController.navigate(Routes.SIGN_IN) {
+//                                popUpTo(Routes.HOME) { inclusive = true }
+//                            }
+//                        },
                         nestedNavController = nestedNavController, // For navigating within home tabs if needed
                         mainNavController =  mainNavController,     // For navigating outside (logout)
                         profileViewModel = viewModel(
