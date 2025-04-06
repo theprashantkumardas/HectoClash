@@ -42,24 +42,44 @@ data class OnlineUserResponse(
     val playerId: String
 )
 
+//data class ChallengeStartData(
+//    val gameId: String,
+//    val totalRounds: Int,
+//    val roundTimeLimitSeconds: Int,
+//    val overallTimeLimitSeconds: Int, // Optional, if server sends it
+//    val player1: PlayerInfo,
+//    val player2: PlayerInfo,
+//    // Initial round data
+//    val currentRound: Int, // Should be 1 initially
+//    val puzzle: String,
+//    val player1Score: Int, // Should be 0 initially
+//    val player2Score: Int  // Should be 0 initially
+//) {
+//    data class PlayerInfo(
+//        val id: String,
+//        val name: String
+//    )
+//}
+
+// Ensure this is a TOP-LEVEL class, not nested
+data class PlayerInfo(
+    val id: String,
+    val name: String
+)
+
+// ChallengeStartData uses the top-level PlayerInfo
 data class ChallengeStartData(
     val gameId: String,
     val totalRounds: Int,
     val roundTimeLimitSeconds: Int,
-    val overallTimeLimitSeconds: Int, // Optional, if server sends it
-    val player1: PlayerInfo,
-    val player2: PlayerInfo,
-    // Initial round data
-    val currentRound: Int, // Should be 1 initially
+    val overallTimeLimitSeconds: Int,
+    val player1: PlayerInfo, // Uses the top-level PlayerInfo
+    val player2: PlayerInfo, // Uses the top-level PlayerInfo
+    val currentRound: Int,
     val puzzle: String,
-    val player1Score: Int, // Should be 0 initially
-    val player2Score: Int  // Should be 0 initially
-) {
-    data class PlayerInfo(
-        val id: String,
-        val name: String
-    )
-}
+    val player1Score: Int,
+    val player2Score: Int
+)
 
 // NEW: Data for starting subsequent rounds
 data class NewRoundData(

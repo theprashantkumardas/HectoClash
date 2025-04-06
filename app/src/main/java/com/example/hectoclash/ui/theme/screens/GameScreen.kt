@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.hectoclash.data.local.TokenManager
 import com.example.hectoclash.data.models.* // Import models
 import com.example.hectoclash.viewmodels.GameViewModel
 import com.example.hectoclash.viewmodels.GameViewModelFactory
@@ -48,11 +49,12 @@ fun GameScreen(
     viewModel: GameViewModel = viewModel(
         factory = GameViewModelFactory(
             LocalContext.current.applicationContext as Application,
-            SavedStateHandle(mapOf( // Pass nav args to SavedStateHandle
+            SavedStateHandle(mapOf(
                 "gameId" to gameId,
-                "opponentName" to opponentName, // Keep opponent info if needed by ViewModel directly
+                "opponentName" to opponentName, // Keep for fallback/initial display
                 "opponentId" to opponentId
-            ))
+            )),
+            TokenManager.getInstance(LocalContext.current) // <<< PROVIDE TokenManager HERE
         )
     )
 ) {
@@ -60,8 +62,6 @@ fun GameScreen(
     val currentRound by viewModel.currentRound.collectAsState()
     val totalRounds by viewModel.totalRounds.collectAsState()
     val puzzle by viewModel.puzzle.collectAsState()
-    val player1Score by viewModel.player1Score.collectAsState() // TODO: Determine player perspective
-    val player2Score by viewModel.player2Score.collectAsState()
     val roundTimeLeft by viewModel.roundTimeLeft.collectAsState()
     val solutionInput by viewModel.solutionInput.collectAsState()
     val isSubmitting by viewModel.isSubmitting.collectAsState()
@@ -69,6 +69,11 @@ fun GameScreen(
     val feedbackMessage by viewModel.feedbackMessage.collectAsState()
     val roundResultInfo by viewModel.roundResultInfo.collectAsState() // Result of the last round
     val challengeResult by viewModel.challengeResult.collectAsState() // Final challenge result
+
+    // ... collect states ...
+    val myScore by viewModel.myScore.collectAsState() // <<< Use computed score
+    val opponentScore by viewModel.opponentScore.collectAsState() // <<< Use computed score
+    val opponentInfo by viewModel.opponentInfo.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -82,15 +87,15 @@ fun GameScreen(
 
     // Determine player perspective (assuming player 1 is 'us' for now)
     // TODO: Get actual user ID and compare with player1/player2 IDs from challenge data if needed
-    val myScore = player1Score
-    val opponentScore = player2Score
-    val opponentInfo = viewModel.opponentInfo // Get from ViewModel
+//    val myScore = player1Score
+//    val opponentScore = player2Score
+//    val opponentInfo = viewModel.opponentInfo // Get from ViewModel
 
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             ChallengeTopBar(
-                opponentName = opponentInfo.name,
+                opponentName = opponentInfo?.name ?: opponentName, // Use state, fallback to nav arg
                 currentRound = currentRound,
                 totalRounds = totalRounds,
                 myScore = myScore,
