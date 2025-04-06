@@ -1,7 +1,6 @@
 package com.example.hectoclash.ui.theme.screens
 
 import android.app.Application
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -16,7 +15,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Backspace
 import androidx.compose.material.icons.filled.Check
@@ -46,92 +44,50 @@ import com.example.hectoclash.viewmodels.GameViewModelFactory
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.delay
 
-
-// Data model for puzzle segments (from friend's code)
-sealed class PuzzleSegment {
-    abstract val char: Char
-    data class Digit(override val char: Char) : PuzzleSegment()
-    data class Operator(override val char: Char) : PuzzleSegment()
-}
-@OptIn(ExperimentalMaterial3Api::class)
-/// Helper function to create puzzle segments (from friend's code)
-// Takes the raw puzzle string and the solution string built by the keypad
-fun createPuzzleSegments(puzzleDigits: String, solutionWithOperators: String): List<PuzzleSegment> {
-    val segments = mutableListOf<PuzzleSegment>()
-    var digitIndex = 0 // Tracks which digit from the original puzzle we're at
-
-    for (char in solutionWithOperators) {
-        // Check if the character corresponds to the *next expected digit* from the original puzzle
-        if (digitIndex < puzzleDigits.length && char == puzzleDigits[digitIndex]) {
-            segments.add(PuzzleSegment.Digit(char))
-            digitIndex++
-        } else if (!char.isDigit()) { // It must be an operator (or parenthesis etc.)
-            segments.add(PuzzleSegment.Operator(char))
-        } else {
-            // This case should ideally not happen if input logic is correct,
-            // but it means a digit appeared in the solution string that wasn't the next expected puzzle digit.
-            // Could happen if digits are somehow inserted incorrectly.
-            // We might ignore it or add it as an 'error' segment if needed.
-            // For now, let's assume operators are added correctly and skip unexpected digits.
-            // Log.w("createPuzzleSegments", "Skipping unexpected digit '$char' in solution.")
-        }
-    }
-
-    // After processing the solution string, add any remaining digits from the original puzzle
-    while (digitIndex < puzzleDigits.length) {
-        segments.add(PuzzleSegment.Digit(puzzleDigits[digitIndex]))
-        digitIndex++
-    }
-
-    return segments
-}
-
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameScreen(
     navController: NavController,
     gameId: String,
-    // opponentName & opponentId are now primarily handled by ViewModel state derived from challenge_start
-    // We keep them in the factory call for potential fallback if needed
-    opponentName: String, // Fallback name from nav args
+    opponentName: String,
     opponentId: String,
+    // Use factory for ViewModel instantiation with TokenManager
     viewModel: GameViewModel = viewModel(
         factory = GameViewModelFactory(
             LocalContext.current.applicationContext as Application,
-            SavedStateHandle(mapOf(
+            SavedStateHandle(mapOf( // Pass nav args to SavedStateHandle
                 "gameId" to gameId,
-                "opponentName" to opponentName, // Pass fallback name
+                "opponentName" to opponentName,
                 "opponentId" to opponentId
             )),
             TokenManager.getInstance(LocalContext.current) // PROVIDE TokenManager
         )
     )
 ) {
-    // Collect States from ViewModel
+    // Collect StateFlows
     val currentRound by viewModel.currentRound.collectAsState()
     val totalRounds by viewModel.totalRounds.collectAsState()
-    val puzzle by viewModel.puzzle.collectAsState() // The raw puzzle digits (e.g., "123456")
+    val puzzle by viewModel.puzzle.collectAsState()
     val roundTimeLeft by viewModel.roundTimeLeft.collectAsState()
-    val solutionInput by viewModel.solutionInput.collectAsState() // The current solution string with operators
+    val solutionInput by viewModel.solutionInput.collectAsState()
     val isSubmitting by viewModel.isSubmitting.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val feedbackMessage by viewModel.feedbackMessage.collectAsState()
     val roundResultInfo by viewModel.roundResultInfo.collectAsState()
     val challengeResult by viewModel.challengeResult.collectAsState()
+    val myPlayerInfo by viewModel.myPlayerInfo.collectAsState()
+    val opponentInfo by viewModel.opponentInfo.collectAsState()
     val myScore by viewModel.myScore.collectAsState()
     val opponentScore by viewModel.opponentScore.collectAsState()
-    val myPlayerInfo by viewModel.myPlayerInfo.collectAsState() // Get own info
-    val opponentInfo by viewModel.opponentInfo.collectAsState() // Get opponent info
 
-    // --- Local UI State (for Friend's UI components) ---
+    // Track cursor position state
     var cursorPosition by remember { mutableStateOf(0) }
     var showCursor by remember { mutableStateOf(true) }
-    val hScrollState = rememberScrollState() // Horizontal scroll for puzzle display
+    val scrollState = rememberScrollState()
 
-    // Calculate segments for RichPuzzleDisplay based on raw puzzle and current solution string
+    // Generate puzzle segments with operators from solution input
     val puzzleSegments = remember(puzzle, solutionInput) {
-        createPuzzleSegments(puzzle, solutionInput) // Use helper
+        createPuzzleSegments(puzzle, solutionInput)
     }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -139,47 +95,44 @@ fun GameScreen(
     // Show feedback in snackbar
     LaunchedEffect(feedbackMessage) {
         feedbackMessage?.let {
-            snackbarHostState.showSnackbar(message = it, duration = SnackbarDuration.Short)
+            snackbarHostState.showSnackbar(
+                message = it,
+                duration = SnackbarDuration.Short
+            )
             viewModel.clearFeedbackMessage()
         }
     }
 
     // Blinking cursor effect
-    LaunchedEffect(key1 = challengeResult) { // Stop blinking when game is over
-        while (challengeResult == null) {
+    LaunchedEffect(key1 = Unit) {
+        while (true) {
             delay(500)
             showCursor = !showCursor
         }
-        showCursor = false // Hide cursor when game ends
     }
 
-    // Auto-scroll RichPuzzleDisplay to cursor (might need refinement)
-    LaunchedEffect(cursorPosition, puzzleSegments.size) {
-        // Estimate width - this is tricky without measuring text. Adjust '20' as needed.
-        val estimatedCharWidthPx = 20
-        val targetScrollPx = (cursorPosition * estimatedCharWidthPx - (hScrollState.viewportSize / 2)) // Try centering cursor
-            .coerceIn(0, hScrollState.maxValue)
-        hScrollState.animateScrollTo(targetScrollPx)
+    // Auto-scroll to ensure cursor is visible
+    LaunchedEffect(cursorPosition) {
+        val characterWidth = 20 // estimated average character width in pixels
+        val targetScroll = (cursorPosition * characterWidth)
+            .coerceAtMost(scrollState.maxValue)
+        scrollState.animateScrollTo(targetScroll)
     }
-
 
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
-            // Use Friend's Top Bar
             GameTopBarWithPlayers(
-                yourName = myPlayerInfo?.name ?: "You", // Use info from VM, fallback
-                opponentName = opponentInfo?.name ?: opponentName, // Use info from VM, fallback
-                // yourImageUrl = myPlayerInfo?.imageUrl, // Pass URLs if available
-                // opponentImageUrl = opponentInfo?.imageUrl,
+                yourName = myPlayerInfo?.name ?: "You",
+                opponentName = opponentInfo?.name ?: opponentName,
                 timeLeft = roundTimeLeft,
                 currentRound = currentRound,
                 totalRounds = totalRounds,
-                myScore = myScore, // Pass computed scores
+                yourScore = myScore,
                 opponentScore = opponentScore
             )
         },
-        containerColor = MaterialTheme.colorScheme.background // Friend's UI background suggestion
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
 
         Box(modifier = Modifier.fillMaxSize()) {
@@ -190,86 +143,132 @@ fun GameScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues)
-                        // Removed vertical scroll from main column, keypad is fixed at bottom
-                        .padding(bottom = 0.dp), // Remove bottom padding if keypad handles it
+                        .padding(bottom = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
-                    // Let content fill space, keypad will be at bottom
-                    // verticalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Spacer(modifier = Modifier.height(16.dp)) // Space below top bar
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                    // Question number display (Optional, friend's has it in top bar now)
-                    /* if (currentRound > 0 && totalRounds > 0) { ... } */
+                    // Question number display at top of screen
+                    if (currentRound > 0 && totalRounds > 0) {
+                        Text(
+                            text = "Question $currentRound of $totalRounds",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
 
-                    // Use Friend's Rich Puzzle Display
+                    // Rich Puzzle Display with Cursor
                     RichPuzzleDisplay(
                         segments = puzzleSegments,
                         cursorPosition = cursorPosition,
                         onCursorPositionChange = { newPosition ->
-                            // Ensure cursor stays within valid bounds (0 to size)
                             cursorPosition = newPosition.coerceIn(0, puzzleSegments.size)
                         },
-                        showCursor = showCursor && challengeResult == null, // Show only if game ongoing
+                        showCursor = showCursor,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp)
-                            .weight(1f), // Let puzzle display take available vertical space
-                        scrollState = hScrollState
+                            .weight(1f),
+                        scrollState = scrollState
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Instruction text (Optional)
+                    // Instruction text
                     Text(
-                        text = "Tap between numbers to place operator",
+                        text = "Type out your answer",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Gray, // Use a less prominent color
+                        color = TextOnDarkSecondary,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
 
-                    // Use Friend's Operator Keypad
+                    // Operator Keypad
                     OperatorKeypad(
                         onOperatorClick = { operator ->
-                            val currentSolution = solutionInput // Get current solution string
-                            val pos = calculateStringIndex(puzzle, currentSolution, cursorPosition) // Calculate real string index
+                            // Fixed: Insert at actual cursor position
+                            val segmentsBefore = puzzleSegments.take(cursorPosition)
+                            val segmentsAfter = puzzleSegments.drop(cursorPosition)
 
-                            if (pos != -1) {
-                                // Insert operator into the string at the calculated position
-                                val newSolution = currentSolution.substring(0, pos) + operator + currentSolution.substring(pos)
-                                viewModel.updateSolutionInput(newSolution) // Update ViewModel state
-                                cursorPosition++ // Move cursor after the inserted operator
-                            } else {
-                                Log.w("GameScreen", "Could not determine string index for cursor position $cursorPosition")
-                                // Maybe show feedback?
+                            // Build the new solution by reconstructing the string with the operator inserted
+                            var newSolution = ""
+                            var digitsAdded = 0
+
+                            // Add segments before cursor
+                            segmentsBefore.forEach { segment ->
+                                if (segment is PuzzleSegment.Digit) {
+                                    if (digitsAdded < puzzle.length) {
+                                        newSolution += puzzle[digitsAdded]
+                                        digitsAdded++
+                                    }
+                                } else {
+                                    newSolution += segment.char
+                                }
                             }
+
+                            // Add the new operator
+                            newSolution += operator
+
+                            // Add segments after cursor
+                            segmentsAfter.forEach { segment ->
+                                if (segment is PuzzleSegment.Digit) {
+                                    if (digitsAdded < puzzle.length) {
+                                        newSolution += puzzle[digitsAdded]
+                                        digitsAdded++
+                                    }
+                                } else {
+                                    newSolution += segment.char
+                                }
+                            }
+
+                            // Add any remaining digits
+                            while (digitsAdded < puzzle.length) {
+                                newSolution += puzzle[digitsAdded]
+                                digitsAdded++
+                            }
+
+                            viewModel.updateSolutionInput(newSolution)
+                            cursorPosition++ // Move cursor after inserted operator
                         },
                         onBackspaceClick = {
-                            val currentSolution = solutionInput
-                            // Calculate string index *before* the cursor
-                            val pos = calculateStringIndex(puzzle, currentSolution, cursorPosition)
+                            if (cursorPosition > 0) {
+                                // Get the segment before the cursor
+                                val segmentToRemove = puzzleSegments.getOrNull(cursorPosition - 1)
 
-                            if (cursorPosition > 0 && pos > 0) { // Need pos > 0 to backspace something
-                                // Find the character in the *solution string* just before the cursor's effective position
-                                val charToRemove = currentSolution.getOrNull(pos - 1)
+                                // Only remove operators, not digits
+                                if (segmentToRemove is PuzzleSegment.Operator) {
+                                    // Build the new solution without this operator
+                                    var newSolution = ""
+                                    var digitsAdded = 0
 
-                                // Only allow backspacing operators or parentheses
-                                if (charToRemove != null && !charToRemove.isDigit()) {
-                                    val newSolution = currentSolution.substring(0, pos - 1) + currentSolution.substring(pos)
+                                    puzzleSegments.forEachIndexed { index, segment ->
+                                        if (index != cursorPosition - 1) { // Skip the segment to remove
+                                            if (segment is PuzzleSegment.Digit) {
+                                                if (digitsAdded < puzzle.length) {
+                                                    newSolution += puzzle[digitsAdded]
+                                                    digitsAdded++
+                                                }
+                                            } else {
+                                                newSolution += segment.char
+                                            }
+                                        }
+                                    }
+
+                                    // Add any remaining digits
+                                    while (digitsAdded < puzzle.length) {
+                                        newSolution += puzzle[digitsAdded]
+                                        digitsAdded++
+                                    }
+
                                     viewModel.updateSolutionInput(newSolution)
                                     cursorPosition-- // Move cursor back
-                                } else {
-                                    Log.d("GameScreen", "Backspace ignored: Tried to delete digit or at start.")
-                                    // Optional: Add haptic feedback or visual cue
                                 }
-                            } else {
-                                Log.d("GameScreen", "Backspace ignored: At start of input.")
                             }
                         },
                         onSubmitClick = viewModel::submitSolution,
                         enabled = challengeResult == null && !isSubmitting && currentRound > 0
                     )
-                    // Add small padding at the very bottom if needed
-                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
 
@@ -280,26 +279,17 @@ fun GameScreen(
                 exit = fadeOut() + slideOutVertically()
             ) {
                 roundResultInfo?.let { result ->
-                    // Use the ViewModel helper for message and color
-                    RoundResultOverlay(
-                        roundNumber = result.roundNumber,
-                        outcomeMessage = viewModel.getRoundOutcomeMessage(result),
-                        outcomeColor = viewModel.getRoundOutcomeColor(result),
-                        // Pass computed scores directly
-                        myScore = myScore,
-                        opponentScore = opponentScore
-                    )
+                    RoundResultOverlay(result = result)
                 }
             }
 
             // --- Challenge Over Overlay ---
             challengeResult?.let { result ->
-                // Use Friend's GameOverOverlay (ensure it matches structure)
-                GameOverOverlay( // Assuming friend's overlay name is GameOverOverlay
+                GameOverOverlay(
                     result = result,
-                    viewModel = viewModel, // Pass VM for messages
-                    onPlayAgain = { /* TODO if needed */ }, // Friend's overlay might have this
-                    onExit = { navController.popBackStack() } // Navigate back on OK/Exit
+                    viewModel = viewModel,
+                    onPlayAgain = { /* Not implemented */ },
+                    onExit = { navController.popBackStack() }
                 )
             }
 
@@ -308,8 +298,7 @@ fun GameScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.3f))
-                        .clickable(enabled = false) {}, // Prevent clicks during submit
+                        .background(Color.Black.copy(alpha = 0.5f)),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
@@ -319,135 +308,160 @@ fun GameScreen(
     }
 }
 
-// --- Helper Function to map cursor position in segments to string index in solutionInput ---
-// This is crucial for inserting/deleting operators correctly
-fun calculateStringIndex(puzzleDigits: String, solutionWithOperators: String, cursorPosition: Int): Int {
-    var stringIndex = 0
-    var segmentsProcessed = 0
+// Helper function to create puzzle segments with operators from solution input
+fun createPuzzleSegments(puzzle: String, solutionInput: String): List<PuzzleSegment> {
+    val segments = mutableListOf<PuzzleSegment>()
     var digitIndex = 0
 
-    // Iterate through the solution string, correlating with puzzle digits
-    for (char in solutionWithOperators) {
-        if (segmentsProcessed == cursorPosition) {
-            return stringIndex // Found the string index corresponding to the cursor position
+    // Process the solution input to create segments
+    var i = 0
+    while (i < solutionInput.length) {
+        if (solutionInput[i].isDigit()) {
+            // This is a digit from the original puzzle
+            if (digitIndex < puzzle.length) {
+                segments.add(PuzzleSegment.Digit(puzzle[digitIndex]))
+                digitIndex++
+            }
+        } else {
+            // This is an operator
+            segments.add(PuzzleSegment.Operator(solutionInput[i]))
         }
-
-        stringIndex++ // Increment string index for this character
-        segmentsProcessed++ // Count this segment (digit or operator)
-
-        // Track if it was a digit from the original puzzle
-        if (digitIndex < puzzleDigits.length && char == puzzleDigits[digitIndex]) {
-            digitIndex++
-        }
+        i++
     }
 
-    // If cursor is at the very end
-    if (segmentsProcessed == cursorPosition) {
-        return stringIndex
+    // Add any remaining digits from the puzzle
+    while (digitIndex < puzzle.length) {
+        segments.add(PuzzleSegment.Digit(puzzle[digitIndex]))
+        digitIndex++
     }
 
-    // Should not happen if cursorPosition is valid (0 to segments.size)
-    Log.e("calculateStringIndex", "Failed to find string index for cursor $cursorPosition")
-    return -1 // Indicate error
+    return segments
 }
 
+// --- Data model for puzzle segments ---
+sealed class PuzzleSegment {
+    abstract val char: Char
+    data class Digit(override val char: Char) : PuzzleSegment()
+    data class Operator(override val char: Char) : PuzzleSegment()
+}
 
-// --- Friend's UI Components (Copied and adapted) ---
-
+// --- Top Bar with Player Info ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameTopBarWithPlayers(
     yourName: String,
     opponentName: String,
-    yourImageUrl: String? = null, // Keep placeholders for images
+    yourImageUrl: String? = null,
     opponentImageUrl: String? = null,
     timeLeft: Long,
     currentRound: Int,
     totalRounds: Int,
-    myScore: Int,       // Added score params
-    opponentScore: Int // Added score params
+    yourScore: Int = 0,
+    opponentScore: Int = 0
 ) {
     val minutes = TimeUnit.MILLISECONDS.toMinutes(timeLeft)
     val seconds = TimeUnit.MILLISECONDS.toSeconds(timeLeft) % 60
     val timeFormatted = String.format("%02d:%02d", minutes, seconds)
-    val timeColor = if (timeLeft <= 10000L && timeLeft > 0L) MaterialTheme.colorScheme.error else LocalContentColor.current
+    val timeColor = if (timeLeft <= 10000 && timeLeft > 0) MaterialTheme.colorScheme.error else LocalContentColor.current
 
     TopAppBar(
-        title = { /* Empty title, info moved to nav/actions */ },
-        navigationIcon = { PlayerScoreInfo(name = yourName, score = myScore, imageUrl = yourImageUrl, color = ProfilePink) },
-        actions = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Timer and Round
-                Icon( Icons.Default.Timer, contentDescription = "Time Left", tint = timeColor )
-                Spacer(Modifier.width(4.dp))
-                Text( text = timeFormatted, fontWeight = FontWeight.Bold, color = timeColor )
-                Spacer(Modifier.width(8.dp))
+        title = {
+            // Center timer in title area
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // Display question number in the title area
                 if (currentRound > 0 && totalRounds > 0) {
-                    Text( "R: $currentRound/$totalRounds", fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Q$currentRound/$totalRounds",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(end = 16.dp)
+                    )
                 }
-                Spacer(Modifier.width(8.dp))
-                // Opponent Info on the right
-                PlayerScoreInfo(name = opponentName, score = opponentScore, imageUrl = opponentImageUrl, color = PurpleFriend)
+
+                Icon(
+                    Icons.Default.Timer,
+                    contentDescription = "Time Left",
+                    tint = timeColor
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = timeFormatted,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = timeColor
+                )
             }
         },
+        navigationIcon = {
+            PlayerInfo(
+                name = yourName,
+                imageUrl = yourImageUrl,
+                color = ProfilePink,
+                score = yourScore
+            )
+        },
+        actions = {
+            // Only opponent info on the right
+            PlayerInfo(
+                name = opponentName,
+                imageUrl = opponentImageUrl,
+                color = PurpleFriend,
+                score = opponentScore
+            )
+        },
         colors = TopAppBarDefaults.topAppBarColors(
-            // containerColor = Color.Gray.copy(alpha = 0.1f) // Friend used Gray
-            containerColor = MaterialTheme.colorScheme.surfaceVariant // Use theme color
+            containerColor = Color.Gray // Changed to Gray as requested
         )
     )
 }
 
-// Modified Player Info to include Score
 @Composable
-fun PlayerScoreInfo(name: String, score: Int, imageUrl: String?, color: Color) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
+fun PlayerInfo(
+    name: String,
+    imageUrl: String?,
+    color: Color,
+    score: Int = 0
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.padding(horizontal = 8.dp)
     ) {
-        // Score Badge
         Box(
             modifier = Modifier
-                .size(24.dp) // Smaller score badge
+                .size(40.dp)
                 .clip(CircleShape)
                 .background(color),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = score.toString(),
-                color = Color.White, // Ensure text is visible
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-        Spacer(modifier = Modifier.width(4.dp))
-        // Player Icon/Image (Placeholder)
-        Box(
-            modifier = Modifier
-                .size(36.dp) // Slightly smaller icon
-                .clip(CircleShape)
-                .background(color.copy(alpha=0.5f)), // Lighter background for icon itself
-            contentAlignment = Alignment.Center
-        ) {
-            // TODO: Use CoilAsyncImage if imageUrl is provided
             Icon(
                 imageVector = Icons.Filled.AccountCircle,
                 contentDescription = "Profile picture of $name",
-                modifier = Modifier.size(32.dp),
+                modifier = Modifier.size(36.dp),
                 tint = Color.White
             )
         }
-        Spacer(modifier = Modifier.width(6.dp))
-        // Player Name
+        Spacer(modifier = Modifier.height(2.dp))
         Text(
             text = name,
-            style = MaterialTheme.typography.bodyMedium, // Adjusted style
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.labelSmall,
             maxLines = 1,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        // Add score text
+        Text(
+            text = score.toString(),
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.Bold
+            ),
             color = MaterialTheme.colorScheme.onSurface
         )
     }
 }
-
 
 @Composable
 fun RichPuzzleDisplay(
@@ -456,83 +470,88 @@ fun RichPuzzleDisplay(
     onCursorPositionChange: (Int) -> Unit,
     showCursor: Boolean,
     modifier: Modifier = Modifier,
-    scrollState: androidx.compose.foundation.ScrollState // Use foundation ScrollState
+    scrollState: androidx.compose.foundation.ScrollState
 ) {
     val cursorColor = MaterialTheme.colorScheme.primary
 
-    Box(
-        modifier = modifier
-            // .background(MaterialTheme.colorScheme.surfaceVariant) // Removed background for cleaner look maybe?
-            .padding(vertical = 8.dp) // Add some vertical padding
-    ) {
-        // Optional: Grid background (comment out if not desired)
-        // DrawGridBackground(Modifier.matchParentSize())
+    Box(modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant)) {
+        DrawGridBackground(
+            modifier = Modifier.fillMaxSize(),
+            color = Color.Gray.copy(alpha = 0.3f),
+            strokeWidth = 1.dp.value,
+            cellSize = 30.dp
+        )
 
-        Surface( // Card-like appearance for the puzzle area
+        Surface(
             modifier = Modifier
                 .align(Alignment.Center)
-                .fillMaxWidth() // Take full width
-                // .heightIn(min = 60.dp, max = 80.dp) // Control height
-                .wrapContentHeight() // Adjust height based on content
-                .padding(horizontal = 8.dp), // Padding around the surface
+                .fillMaxWidth(0.95f)
+                .heightIn(max = 70.dp)
+                .padding(horizontal = 8.dp),
             shape = RoundedCornerShape(16.dp),
             color = MaterialTheme.colorScheme.surface,
             shadowElevation = 4.dp
         ) {
             Box(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 16.dp), // Padding inside the surface
-                contentAlignment = Alignment.CenterStart // Align content to start
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Row(
                     modifier = Modifier
-                        .horizontalScroll(scrollState) // Enable horizontal scrolling
-                        .fillMaxWidth(), // Allow row to take width for scrolling
-                    // horizontalArrangement = Arrangement.Center, // Center content within the scrollable row
+                        .horizontalScroll(scrollState)
+                        .wrapContentSize(),
+                    horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Cursor at the very beginning (index 0)
+                    // First cursor position
                     ClickableCursorArea(
                         index = 0,
                         currentCursorPosition = cursorPosition,
                         showCursor = showCursor,
                         cursorColor = cursorColor,
                         onClick = { onCursorPositionChange(0) },
+                        height = 30.dp,
+                        width = 4.dp
                     )
 
-                    // Display segments and cursors between them
+                    // All segments with their cursor positions
                     segments.forEachIndexed { index, segment ->
+                        // The segment itself
                         Text(
                             text = segment.char.toString(),
                             style = when (segment) {
-                                is PuzzleSegment.Digit -> MaterialTheme.typography.headlineLarge.copy( // Larger font
+                                is PuzzleSegment.Digit -> MaterialTheme.typography.headlineMedium.copy(
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontSize = 22.sp
                                 )
-                                is PuzzleSegment.Operator -> MaterialTheme.typography.headlineLarge.copy( // Larger font
+                                is PuzzleSegment.Operator -> MaterialTheme.typography.headlineMedium.copy(
                                     fontWeight = FontWeight.Normal,
-                                    color = MaterialTheme.colorScheme.primary // Operators in primary color
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontSize = 22.sp
                                 )
                             },
                             modifier = Modifier
-                                .clickable { onCursorPositionChange(index + 1) } // Click text to place cursor after it
-                                .padding(horizontal = 2.dp) // Small padding around chars
+                                .clickable { onCursorPositionChange(index + 1) }
+                                .padding(horizontal = 0.dp)
                         )
 
-                        // Cursor after this segment (index + 1)
+                        // Cursor after the segment
                         ClickableCursorArea(
                             index = index + 1,
                             currentCursorPosition = cursorPosition,
                             showCursor = showCursor,
                             cursorColor = cursorColor,
                             onClick = { onCursorPositionChange(index + 1) },
+                            height = 30.dp,
+                            width = 4.dp
                         )
-                    } // End forEachIndexed
-                } // End Row
-            } // End Box (inner content box)
-        } // End Surface
-    } // End Box (outer container)
+                    }
+                }
+            }
+        }
+    }
 }
-
 
 @Composable
 fun ClickableCursorArea(
@@ -542,32 +561,66 @@ fun ClickableCursorArea(
     cursorColor: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    height: Dp = 40.dp, // Height for the clickable area and cursor line
-    width: Dp = 8.dp    // Width of the clickable area around the cursor line
+    height: Dp = 40.dp,
+    width: Dp = 8.dp
 ) {
     Box(
         modifier = modifier
             .size(width = width, height = height)
-            .clickable(onClick = onClick), // Make the area clickable
+            .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        // Draw the blinking cursor line if this is the active position
         if (index == currentCursorPosition && showCursor) {
             Divider(
                 color = cursorColor,
                 modifier = Modifier
-                    .fillMaxHeight(0.7f) // Adjust cursor line height relative to area
-                    .width(2.dp)         // Cursor line thickness
+                    .fillMaxHeight(0.8f)
+                    .width(2.dp)
             )
         }
     }
 }
 
-// DrawGridBackground (optional, can keep from friend's code if desired)
+// Simple Grid Background Composable
 @Composable
-fun DrawGridBackground() { /* ... as before ... */ }
+fun DrawGridBackground(
+    modifier: Modifier = Modifier,
+    color: Color = Color.Gray,
+    strokeWidth: Float = 1f,
+    cellSize: Dp = 20.dp
+) {
+    Canvas(modifier = modifier) {
+        val pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
 
-// Operator Keypad (Use friend's layout)
+        // Calculate number of lines based on size and cell size
+        val verticalLines = (size.width / cellSize.toPx()).toInt()
+        val horizontalLines = (size.height / cellSize.toPx()).toInt()
+
+        // Draw vertical lines
+        for (i in 0..verticalLines) {
+            val startX = i * cellSize.toPx()
+            drawLine(
+                color = color,
+                start = Offset(startX, 0f),
+                end = Offset(startX, size.height),
+                strokeWidth = strokeWidth
+            )
+        }
+
+        // Draw horizontal lines
+        for (i in 0..horizontalLines) {
+            val startY = i * cellSize.toPx()
+            drawLine(
+                color = color,
+                start = Offset(0f, startY),
+                end = Offset(size.width, startY),
+                strokeWidth = strokeWidth
+            )
+        }
+    }
+}
+
+// --- Operator Keypad ---
 @Composable
 fun OperatorKeypad(
     onOperatorClick: (Char) -> Unit,
@@ -576,21 +629,18 @@ fun OperatorKeypad(
     enabled: Boolean,
     modifier: Modifier = Modifier
 ) {
-    // Friend's button layout structure
     val buttons = listOf(
         listOf("(", ")", "+"),
         listOf("/", "*", "-"),
-        // listOf("^", "←", "Enter") // Friend had caret, adjust if needed
-        listOf(" ", "←", "Enter") // Replace caret with space if not used
+        listOf("^", "←", "Enter")
     )
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.3f)) // Keypad background
-            .padding(horizontal = 8.dp, vertical = 12.dp), // Padding around keypad
+            .padding(horizontal = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp) // Space between rows
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         buttons.forEach { row ->
             Row(
@@ -599,30 +649,26 @@ fun OperatorKeypad(
             ) {
                 row.forEach { btnText ->
                     val buttonModifier = Modifier
-                        .weight(1f) // Equal weight distribution
-                        .height(52.dp) // Slightly smaller buttons
+                        .weight(1f)
+                        .height(56.dp)
 
                     when (btnText) {
-                        " " -> Spacer(modifier = buttonModifier) // Use spacer for empty slot if needed
-                        "←" -> KeypadButton( // Backspace
+                        "←" -> KeypadButton(
                             text = btnText,
                             onClick = onBackspaceClick,
                             enabled = enabled,
                             modifier = buttonModifier,
-                            isIcon = true, // Use icon for backspace
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer, // Different color
-                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            isIcon = true
                         )
-                        "Enter" -> KeypadButton( // Submit
+                        "Enter" -> KeypadButton(
                             text = btnText,
                             onClick = onSubmitClick,
                             enabled = enabled,
                             modifier = buttonModifier,
-                            isIcon = true, // Use checkmark icon
-                            containerColor = MaterialTheme.colorScheme.primary, // Primary color
+                            containerColor = MaterialTheme.colorScheme.primary,
                             contentColor = MaterialTheme.colorScheme.onPrimary
                         )
-                        else -> KeypadButton( // Operators
+                        else -> KeypadButton(
                             text = btnText,
                             onClick = { onOperatorClick(btnText[0]) },
                             enabled = enabled,
@@ -635,97 +681,95 @@ fun OperatorKeypad(
     }
 }
 
-// Keypad Button (Use friend's styling)
 @Composable
 fun KeypadButton(
     text: String,
     onClick: () -> Unit,
     enabled: Boolean,
     modifier: Modifier = Modifier,
-    containerColor: Color = MaterialTheme.colorScheme.surfaceVariant, // Default button color
-    contentColor: Color = MaterialTheme.colorScheme.onSurfaceVariant, // Default text color
+    containerColor: Color = MaterialTheme.colorScheme.surfaceVariant,
+    contentColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     isIcon: Boolean = false
 ) {
     Button(
         onClick = onClick,
         modifier = modifier,
         enabled = enabled,
-        shape = RoundedCornerShape(16.dp), // More rounded
+        shape = RoundedCornerShape(12.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = containerColor,
             contentColor = contentColor,
-            disabledContainerColor = containerColor.copy(alpha = 0.3f),
+            disabledContainerColor = containerColor.copy(alpha = 0.5f),
             disabledContentColor = contentColor.copy(alpha = 0.5f)
         ),
-        contentPadding = PaddingValues(4.dp) // Adjust padding if needed
+        contentPadding = PaddingValues(0.dp)
     ) {
-        if (isIcon) {
-            when (text) {
-                "←" -> Icon(Icons.AutoMirrored.Filled.Backspace, "Backspace", modifier = Modifier.size(24.dp)) // Use AutoMirrored
-                "Enter" -> Icon(Icons.Default.Check, "Submit", modifier = Modifier.size(24.dp))
-                // Add other icons if needed
-            }
+        if (isIcon && text == "←") {
+            Icon(
+                imageVector = Icons.Default.Backspace,
+                contentDescription = "Backspace",
+                modifier = Modifier.size(24.dp)
+            )
         } else {
             Text(
                 text = text,
-                fontSize = 22.sp, // Larger operator font size
+                fontSize = if (text == "Enter") 16.sp else 20.sp,
                 fontWeight = FontWeight.Medium
             )
         }
     }
 }
 
-// Use friend's Round Result Overlay (Modified to use VM helpers)
 @Composable
-fun RoundResultOverlay(
-    roundNumber: Int,
-    outcomeMessage: String,
-    outcomeColor: Color,
-    myScore: Int,
-    opponentScore: Int,
-    modifier: Modifier = Modifier
-) {
+fun RoundResultOverlay(result: RoundOverData) {
     Box(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.6f))
+            .background(Color.Black.copy(alpha = 0.5f))
             .clickable(enabled = false) {},
         contentAlignment = Alignment.Center
     ) {
         Card(
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.padding(horizontal = 40.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.padding(horizontal = 40.dp)
         ) {
             Column(
-                modifier = Modifier.padding(horizontal= 24.dp, vertical = 32.dp),
+                modifier = Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    "Round $roundNumber Result",
-                    style = MaterialTheme.typography.titleLarge,
+                    "Round ${result.roundNumber} Over",
+                    style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
-                Spacer(Modifier.height(12.dp))
-                // Outcome message already includes score context from ViewModel helper
-                Text(outcomeMessage, style = MaterialTheme.typography.headlineSmall, color = outcomeColor, textAlign = TextAlign.Center)
-                // Spacer(Modifier.height(16.dp))
-                // Text( // Score display might be redundant if included in message
-                //     "Score: $myScore - $opponentScore",
-                //     style = MaterialTheme.typography.titleMedium
-                // )
+                Spacer(Modifier.height(8.dp))
+                val roundOutcome = when {
+                    result.roundWinnerId != null -> "Round Won!"
+                    result.reason == "timeout" -> "Round Timed Out!"
+                    else -> "Round Draw!"
+                }
+                val outcomeColor = when {
+                    result.roundWinnerId != null -> Color(0xFF4CAF50)
+                    result.reason == "timeout" -> Color.Gray
+                    else -> MaterialTheme.colorScheme.secondary
+                }
+
+                Text(roundOutcome, style = MaterialTheme.typography.titleLarge, color = outcomeColor)
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    "Score: ${result.player1Score} - ${result.player2Score}",
+                    style = MaterialTheme.typography.titleMedium
+                )
             }
         }
     }
 }
 
-
-// Use friend's Game Over Overlay
 @Composable
 fun GameOverOverlay(
     result: ChallengeOverData,
     viewModel: GameViewModel,
-    onPlayAgain: () -> Unit, // Keep param even if not used yet
+    onPlayAgain: () -> Unit,
     onExit: () -> Unit
 ) {
     val outcomeMessage = viewModel.getChallengeOutcomeMessage()
@@ -740,8 +784,9 @@ fun GameOverOverlay(
     ) {
         Card(
             shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth(0.9f).wrapContentHeight(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .wrapContentHeight(),
             elevation = CardDefaults.cardElevation(8.dp)
         ) {
             Column(
@@ -753,10 +798,10 @@ fun GameOverOverlay(
                     text = outcomeMessage,
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
-                    color = when { // Use same color logic
+                    color = when {
                         outcomeMessage.contains("Won") -> Color(0xFF4CAF50)
-                        outcomeMessage.contains("Lost") -> Color.Red // Use Theme color
-                        outcomeMessage.contains("Draw") -> Color.Yellow // Use Theme color
+                        outcomeMessage.contains("Lost") -> MaterialTheme.colorScheme.error
+                        outcomeMessage.contains("Draw") -> MaterialTheme.colorScheme.secondary
                         outcomeMessage.contains("Error") -> MaterialTheme.colorScheme.error
                         else -> LocalContentColor.current
                     },
@@ -765,16 +810,15 @@ fun GameOverOverlay(
                 Spacer(Modifier.height(16.dp))
 
                 Text(
-                    text = resultDetails, // Includes final score
+                    text = resultDetails,
                     style = MaterialTheme.typography.bodyLarge,
                     textAlign = TextAlign.Center
                 )
 
                 Spacer(Modifier.height(24.dp))
 
-                // Friend's version used "OK" button
                 Button(onClick = onExit) {
-                    Icon(Icons.Default.Check, contentDescription = null) // Use checkmark
+                    Icon(Icons.Default.Check, contentDescription = null)
                     Spacer(Modifier.size(ButtonDefaults.IconSpacing))
                     Text("OK")
                 }

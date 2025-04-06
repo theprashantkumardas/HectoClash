@@ -36,7 +36,6 @@ import com.example.hectoclash.ui.theme.GreenAccent
 import com.example.hectoclash.ui.theme.ProfilePink
 import com.example.hectoclash.ui.theme.PurpleFriend
 import com.example.hectoclash.ui.theme.TextOnDarkSecondary
-import com.example.hectoclash.ui.theme.components.BottomNavItem
 
 // Define data class for friend status (replace with your actual data model)
 data class FriendStatus(val id: String, val name: String, val isOnline: Boolean)
@@ -46,18 +45,7 @@ fun PlayScreen(
     mainNavController: NavHostController,
 ) {
     // Observe username from ViewModel (replace with your actual state management)
-//    val username by profileViewModel.username.collectAsState() // Example
     val username = "HectoClash" // Replace with actual username from ViewModel
-
-    // Dummy data for friends row - replace with actual data from ViewModel/Repository
-//    val activeFriends = listOf(
-//        FriendStatus("1", "Alice", true),
-//        FriendStatus("2", "Bob", true),
-//        FriendStatus("3", "Charlie", true),
-//        FriendStatus("4", "David", true),
-//        FriendStatus("5", "Eve", true),
-//        FriendStatus("6", "Eve", true)
-//    )
 
     // Define the background gradient
     val backgroundGradient = Brush.verticalGradient(
@@ -77,30 +65,12 @@ fun PlayScreen(
         TopAppBar(
             username = username ?: "Player", // Use fetched username or default
             onProfileClick = {
-                // Navigate to the nested Profile Tab using its route
-                mainNavController.navigate(Routes.HOME_PROFILE_TAB) {
-                    // Optional: Add specific navigation options if needed
-                    launchSingleTop = true
-                }
+                // Using the fixed approach: navigate to the HOME_PROFILE_TAB directly
+                mainNavController.navigate(Routes.HOME_PROFILE_TAB)
             }
         )
 
         Spacer(modifier = Modifier.height(24.dp))
-
-        // Horizontal Friends Row
-//        ActiveFriendsRow(
-//            friends = activeFriends,
-//            onFriendClick = { friendId ->
-//                // Navigate to User Profile screen using the main NavController
-//                mainNavController.navigate(Routes.createUserProfileRoute(friendId))
-//            },
-//            onMoreClick = {
-//                // Navigate to the main Friends List tab/screen
-//                mainNavController.navigate(Routes.FRIENDS_LIST) {
-//                    launchSingleTop = true
-//                }
-//            }
-//        )
 
         Spacer(modifier = Modifier.height(32.dp))
 
@@ -130,7 +100,6 @@ fun PlayScreen(
                 mainNavController.navigate(Routes.FRIENDS_LIST) {
                     launchSingleTop = true
                 }
-                // Or directly to PLAY_ONLINE if that's where friend challenges happen? Adjust as needed.
             }
         )
         DuelOptionCard(
@@ -168,7 +137,7 @@ fun TopAppBar(username: String, onProfileClick: () -> Unit) {
                 .size(48.dp)
                 .clip(CircleShape) // Clip the box to make background circular
                 .background(ProfilePink) // Use theme color or specific color
-                .clickable(onClick = onProfileClick),
+                .clickable(onClick = onProfileClick), // Add clickable modifier with onProfileClick callback
             contentAlignment = Alignment.Center
         ) {
             Image(
@@ -180,8 +149,8 @@ fun TopAppBar(username: String, onProfileClick: () -> Unit) {
                 contentScale = ContentScale.Crop // Ensures the image fills the space properly
             )
         }
-        }
     }
+}
 
 @Composable
 fun ActiveFriendsRow(
@@ -255,7 +224,6 @@ fun FriendIconWithStatus(isOnline: Boolean, onClick: () -> Unit) {
         }
     }
 }
-
 
 @Composable
 fun DuelOptionCard(
