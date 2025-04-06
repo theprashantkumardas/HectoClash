@@ -1,5 +1,6 @@
 package com.example.hectoclash.ui.theme.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,10 +22,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.example.hectoclash.R
 import com.example.hectoclash.navigation.Routes
 import com.example.hectoclash.ui.theme.DarkBackgroundEnd
 import com.example.hectoclash.ui.theme.DarkBackgroundStart
@@ -32,6 +36,7 @@ import com.example.hectoclash.ui.theme.GreenAccent
 import com.example.hectoclash.ui.theme.ProfilePink
 import com.example.hectoclash.ui.theme.PurpleFriend
 import com.example.hectoclash.ui.theme.TextOnDarkSecondary
+import com.example.hectoclash.ui.theme.components.BottomNavItem
 
 // Define data class for friend status (replace with your actual data model)
 data class FriendStatus(val id: String, val name: String, val isOnline: Boolean)
@@ -45,14 +50,14 @@ fun PlayScreen(
     val username = "HectoClash" // Replace with actual username from ViewModel
 
     // Dummy data for friends row - replace with actual data from ViewModel/Repository
-    val activeFriends = listOf(
-        FriendStatus("1", "Alice", true),
-        FriendStatus("2", "Bob", true),
-        FriendStatus("3", "Charlie", true),
-        FriendStatus("4", "David", true),
-        FriendStatus("5", "Eve", true),
-        FriendStatus("6", "Eve", true)
-    )
+//    val activeFriends = listOf(
+//        FriendStatus("1", "Alice", true),
+//        FriendStatus("2", "Bob", true),
+//        FriendStatus("3", "Charlie", true),
+//        FriendStatus("4", "David", true),
+//        FriendStatus("5", "Eve", true),
+//        FriendStatus("6", "Eve", true)
+//    )
 
     // Define the background gradient
     val backgroundGradient = Brush.verticalGradient(
@@ -83,19 +88,19 @@ fun PlayScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         // Horizontal Friends Row
-        ActiveFriendsRow(
-            friends = activeFriends,
-            onFriendClick = { friendId ->
-                // Navigate to User Profile screen using the main NavController
-                mainNavController.navigate(Routes.createUserProfileRoute(friendId))
-            },
-            onMoreClick = {
-                // Navigate to the main Friends List tab/screen
-                mainNavController.navigate(Routes.FRIENDS_LIST) {
-                    launchSingleTop = true
-                }
-            }
-        )
+//        ActiveFriendsRow(
+//            friends = activeFriends,
+//            onFriendClick = { friendId ->
+//                // Navigate to User Profile screen using the main NavController
+//                mainNavController.navigate(Routes.createUserProfileRoute(friendId))
+//            },
+//            onMoreClick = {
+//                // Navigate to the main Friends List tab/screen
+//                mainNavController.navigate(Routes.FRIENDS_LIST) {
+//                    launchSingleTop = true
+//                }
+//            }
+//        )
 
         Spacer(modifier = Modifier.height(32.dp))
 
@@ -131,7 +136,7 @@ fun PlayScreen(
         DuelOptionCard(
             title = "PRACTICE",
             subtitle = "Learn hectoc",
-            onClick = { /* TODO: Navigate to Practice Screen */ }
+            onClick = { mainNavController.navigate(Routes.PRACTICE) }
         )
         DuelOptionCard(
             title = "WATCH LIVE",
@@ -166,15 +171,17 @@ fun TopAppBar(username: String, onProfileClick: () -> Unit) {
                 .clickable(onClick = onProfileClick),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Filled.AccountCircle,
+            Image(
+                painter = painterResource(id = R.drawable.profile_pic), // Replace with your profile image
                 contentDescription = "Profile",
-                modifier = Modifier.size(44.dp), // Icon slightly smaller than background
-                tint = Color.White // Ensure icon is visible on pink
+                modifier = Modifier
+                    .size(44.dp) // Image slightly smaller than background
+                    .clip(CircleShape), // Ensure the image itself is also clipped to circle
+                contentScale = ContentScale.Crop // Ensures the image fills the space properly
             )
         }
+        }
     }
-}
 
 @Composable
 fun ActiveFriendsRow(

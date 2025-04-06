@@ -80,22 +80,22 @@ fun PlayOnlineScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
-                actions = {
-                    // Make refresh button more prominent
-                    IconButton(
-                        onClick = { viewModel.fetchOnlineUsers() },
-                        enabled = !isLoading
-                    ) {
-                        Icon(
-                            Icons.Default.Refresh,
-                            contentDescription = "Refresh",
-                            // Increase icon size for better visibility
-                            modifier = Modifier.size(28.dp),
-                            // Use a contrasting color to make it stand out
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
+//                actions = {
+//                    // Make refresh button more prominent
+//                    IconButton(
+//                        onClick = { viewModel.fetchOnlineUsers() },
+//                        enabled = !isLoading
+//                    ) {
+//                        Icon(
+//                            Icons.Default.Refresh,
+//                            contentDescription = "Refresh",
+//                            // Increase icon size for better visibility
+//                            modifier = Modifier.size(28.dp),
+//                            // Use a contrasting color to make it stand out
+//                            tint = MaterialTheme.colorScheme.primary
+//                        )
+//                    }
+//                }
             )
         }
     ) { paddingValues ->
@@ -167,15 +167,15 @@ fun PlayOnlineScreen(
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Spacer(modifier = Modifier.height(16.dp))
-                            Button(onClick = { viewModel.fetchOnlineUsers() }) {
-                                Icon(
-                                    Icons.Default.Refresh,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(ButtonDefaults.IconSize)
-                                )
-                                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                                Text("Refresh")
-                            }
+//                            Button(onClick = { viewModel.fetchOnlineUsers() }) {
+//                                Icon(
+//                                    Icons.Default.Refresh,
+//                                    contentDescription = null,
+//                                    modifier = Modifier.size(ButtonDefaults.IconSize)
+//                                )
+//                                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+//                                Text("Refresh")
+//                            }
                         }
                     } else if (displayUsers.isNotEmpty()) {
                         Column {

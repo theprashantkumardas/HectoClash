@@ -29,9 +29,11 @@ import com.example.hectoclash.ui.theme.screens.GameScreen
 import com.example.hectoclash.ui.theme.screens.HomeScreen
 import com.example.hectoclash.ui.theme.screens.MatchmakingScreen
 import com.example.hectoclash.ui.theme.screens.PlayOnlineScreen
+import com.example.hectoclash.ui.theme.screens.PracticeScreen
 import com.example.hectoclash.ui.theme.screens.ProfileScreen
 import com.example.hectoclash.ui.theme.screens.SignInScreen
 import com.example.hectoclash.ui.theme.screens.SignUpScreen
+import com.example.hectoclash.ui.theme.screens.SplashScreen
 import com.example.hectoclash.ui.theme.screens.UserProfileScreen
 import com.example.hectoclash.utils.SocketManager
 import com.example.hectoclash.viewmodels.UserProfileViewModelFactory
@@ -53,6 +55,8 @@ object Routes {
     const val USER_PROFILE = "user_profile/{userId}" // Route for user profile
 
     const val GAME = "game/{gameId}/{opponentName}/{opponentId}"
+
+    const val PRACTICE = "practice"
 
 
     // ... other routes ...
@@ -165,7 +169,12 @@ fun AppNavigation() {
 
     // Render NavHost only after startDestination is determined
     if (startDestination != null) {
-        NavHost(navController = navController, startDestination = startDestination!!) {
+        NavHost(navController = navController, startDestination = Routes.SPLASH) {
+
+            composable(Routes.SPLASH) {
+                SplashScreen(navController) // Assumes SplashScreen takes NavController
+            }
+
             composable(Routes.SIGN_IN) {
                 SignInScreen(navController) // Assumes SignInScreen takes NavController
             }
@@ -177,6 +186,11 @@ fun AppNavigation() {
                 // It needs the main NavController to navigate *outside* the home tabs (like to PlayOnline)
                 HomeScreen(mainNavController = navController)
             }
+
+            composable(Routes.PRACTICE) {
+                 PracticeScreen(navController,viewModel = viewModel()) // Uncomment if you have a PracticeScreen
+            }
+
             composable(Routes.PLAY_ONLINE) {
                 // PlayOnlineScreen now only needs the onBackClick lambda
                 PlayOnlineScreen(
@@ -235,6 +249,8 @@ fun AppNavigation() {
                 MatchmakingScreen(navController = navController)
             }
             // <<< END NEW >>>
+
+
 
 
             composable(
